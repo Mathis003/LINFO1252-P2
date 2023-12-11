@@ -206,13 +206,13 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         // Check if the entry exists
         if (strcmp(header.name, path) == 0)
         {
-            char link_target[100]; // Max length of the link's name
-            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) strdup(link_target, header.linkname);
-            else                                                          strdup(link_target, header.name);
-
-            entries[iter] = link_target;
-            *no_entries++;
-            iter++;
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) list(tar_fd, header.linkname, entries, no_entries);
+            else
+            {
+                entries[iter] = header.name;
+                *no_entries++;
+                iter++;
+            }
         }
     }
     return *no_entries;
@@ -238,5 +238,27 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
 {
-    return 0;
+    size_t max_length = *len;
+    if (offset < 0 || offset > max_length) return -2;
+
+    tar_header_t header;
+    while (1)
+    {
+        ssize_t bytes_read = pread(tar_fd, &header, HEADER_SIZE, offset);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+        
+        if (strcmp(header.name, path) == 0)
+        {
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) read_file(tar_fd, header.linkname, offset, dest, len);
+
+            bytes_read = pread(tar_fd, dest, TAR_INT(header.size), offset);
+            dest += bytes_read;
+            *len += size(bytes_read);
+            offset += TAR_INT(header.size);
+        }
+    }
+
+    return (*len == max_length) ? 0 : (*len - max_length);
 }                
