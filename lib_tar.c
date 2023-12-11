@@ -193,6 +193,29 @@ int is_symlink(int tar_fd, char *path)
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
+    tar_header_t header;
+    int iter = 0;
+    *no_entries = 0;
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+        
+        // Check if the entry exists
+        if (strcmp(header.name, path) == 0)
+        {
+            char link_target[100]; // Max length of the link's name
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) strdup(link_target, header.linkname);
+            else                                                          strdup(link_target, header.name);
+
+            entries[iter] = link_target;
+            *no_entries++;
+            iter++;
+        }
+    }
+    return *no_entries;
 }
 
 /**
