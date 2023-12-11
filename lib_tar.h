@@ -27,6 +27,8 @@ typedef struct posix_header
     char padding[12];             /* 500 */
 } tar_header_t;
 
+const size_t HEADER_SIZE = sizeof(tar_header_t);
+
 #define TMAGIC   "ustar"        /* ustar and a null */
 #define TMAGLEN  6
 #define TVERSION "00"           /* 00 and no null */

@@ -17,7 +17,43 @@
  */
 int check_archive(int tar_fd)
 {
-    return 0;
+    tar_header_t header;
+    int valid_headers = 0;
+
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] != '\0')
+        {
+            // Check magic value
+            if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0)
+            {
+                close(tar_fd);
+                return -1;
+            }
+
+            // Check version value
+            if (strncmp(header.version, TVERSION, TVERSLEN) != 0)
+            {
+                close(tar_fd);
+                return -2;
+            }
+
+            // Check checksum value
+            if (header.chksum[0] == '\0')
+            {
+                close(tar_fd);
+                return -3;
+            }
+
+            valid_headers++;
+        }
+    }
+
+    close(tar_fd);
+    return valid_headers;
 }
 
 /**
@@ -31,6 +67,17 @@ int check_archive(int tar_fd)
  */
 int exists(int tar_fd, char *path)
 {
+    tar_header_t header;
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+
+        if (strcmp(header.name, path) == 0) return 1;
+    }
+
     return 0;
 }
 
@@ -45,7 +92,22 @@ int exists(int tar_fd, char *path)
  */
 int is_dir(int tar_fd, char *path)
 {
-    return 0;
+    tar_header_t header;
+    int ret = 0;
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+
+        if (strcmp(header.name, path) == 0)
+        {
+            if (header.typeflag == DIRTYPE) ret = 1;
+            break;
+        }
+    }
+    return ret;
 }
 
 /**
@@ -59,7 +121,22 @@ int is_dir(int tar_fd, char *path)
  */
 int is_file(int tar_fd, char *path)
 {
-    return 0;
+    tar_header_t header;
+    int ret = 0;
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+
+        if (strcmp(header.name, path) == 0)
+        {
+            if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) ret = 1;
+            break;
+        }
+    }
+    return ret;
 }
 
 /**
@@ -72,7 +149,22 @@ int is_file(int tar_fd, char *path)
  */
 int is_symlink(int tar_fd, char *path)
 {
-    return 0;
+    tar_header_t header;
+    int ret = 0;
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+    
+        if (strcmp(header.name, path) == 0)
+        {
+            if (header.typeflag == SYMTYPE) ret = 1;
+            break;
+        }
+    }
+    return ret;
 }
 
 
@@ -100,7 +192,26 @@ int is_symlink(int tar_fd, char *path)
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
-    return 0;
+    *no_entries = 0;
+    tar_header_t header;
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+
+        if (strncmp(header.name, path, strlen(path)) == 0)
+        {
+            if (header.typeflag == DIRTYPE)
+            {
+                strncpy(entries[*no_entries], header.name, sizeof(header.name));
+                entries[*no_entries][sizeof(header.name) - 1] = '\0';
+                (*no_entries)++;
+            }
+        }
+    }
+    return (*no_entries == 0) ? 0 : 1;
 }
 
 /**
