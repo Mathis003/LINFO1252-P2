@@ -1,13 +1,8 @@
 #include "lib_tar.h"
 
+#include <stdio.h>
 
-/*
-Remarque :
-Le code ne prend pas en compte les doublons, c'est à dire que si on a un fichier et un dossier qui ont le même nom, il ne prendra en compte que le premier qu'il trouve.
-Et aussi, j'ai mis l'hypothèse que read() change le pointeur de lecture du fichier mais je ne suis pas sûr.
-*/
-
-
+const size_t HEADER_SIZE = sizeof(tar_header_t);
 
 /**
  * Checks whether the archive is valid.
@@ -132,7 +127,9 @@ int is_x(int tar_fd, char *path, char *types_file)
  */
 int is_dir(int tar_fd, char *path)
 {
-    return is_x(tar_fd, path, DIRTYPE);
+    char type_file[1];
+    type_file[0] = DIRTYPE;
+    return is_x(tar_fd, path, type_file);
 }
 
 /**
@@ -146,7 +143,7 @@ int is_dir(int tar_fd, char *path)
  */
 int is_file(int tar_fd, char *path)
 {
-    int types_file[2];
+    char types_file[2];
     types_file[0] = REGTYPE;
     types_file[1] = AREGTYPE;
     return is_x(tar_fd, path, types_file);
@@ -162,7 +159,7 @@ int is_file(int tar_fd, char *path)
  */
 int is_symlink(int tar_fd, char *path)
 {
-    int types_file[2];
+    char types_file[2];
     types_file[0] = SYMTYPE;
     types_file[1] = LNKTYPE;
     return is_x(tar_fd, path, types_file);
@@ -210,7 +207,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             else
             {
                 entries[iter] = header.name;
-                *no_entries++;
+                (*no_entries)++;
                 iter++;
             }
         }
@@ -254,8 +251,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) read_file(tar_fd, header.linkname, offset, dest, len);
 
             bytes_read = pread(tar_fd, dest, TAR_INT(header.size), offset);
-            dest += bytes_read;
-            *len += size(bytes_read);
+            *len += bytes_read;
             offset += TAR_INT(header.size);
         }
     }

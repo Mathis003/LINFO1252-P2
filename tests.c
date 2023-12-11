@@ -33,7 +33,7 @@ void true_tests(int fd)
     printf("check_archive returned : %d\n\n", ret_check_archive);
     if (ret_check_archive < 0) error("check_archive");
 
-    char *path_exists = "...TODO...";
+    char *path_exists = "folder_test/";
     int ret_exists = exists(fd, path_exists);
     printf("exists returned : %d\n\n", ret_exists);
     if (ret_exists == 0) error("exists");
