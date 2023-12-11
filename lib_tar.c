@@ -1,5 +1,14 @@
 #include "lib_tar.h"
 
+
+/*
+Remarque :
+Le code ne prend pas en compte les doublons, c'est à dire que si on a un fichier et un dossier qui ont le même nom, il ne prendra en compte que le premier qu'il trouve.
+Et aussi, j'ai mis l'hypothèse que read() change le pointeur de lecture du fichier mais je ne suis pas sûr.
+*/
+
+
+
 /**
  * Checks whether the archive is valid.
  *
@@ -25,31 +34,30 @@ int check_archive(int tar_fd)
         ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
 
-        if (header.name[0] != '\0')
+        if (header.name[0] != '\0') break;
+        
+        // Check magic value
+        if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0)
         {
-            // Check magic value
-            if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0)
-            {
-                close(tar_fd);
-                return -1;
-            }
-
-            // Check version value
-            if (strncmp(header.version, TVERSION, TVERSLEN) != 0)
-            {
-                close(tar_fd);
-                return -2;
-            }
-
-            // Check checksum value
-            if (header.chksum[0] == '\0')
-            {
-                close(tar_fd);
-                return -3;
-            }
-
-            valid_headers++;
+            close(tar_fd);
+            return -1;
         }
+
+        // Check version value
+        if (strncmp(header.version, TVERSION, TVERSLEN) != 0)
+        {
+            close(tar_fd);
+            return -2;
+        }
+
+        // Check checksum value
+        if (header.chksum[0] == '\0')
+        {
+            close(tar_fd);
+            return -3;
+        }
+
+        valid_headers++;
     }
 
     close(tar_fd);
@@ -75,9 +83,41 @@ int exists(int tar_fd, char *path)
 
         if (header.name[0] == '\0') break;
 
+        // Check if the entry exists
         if (strcmp(header.name, path) == 0) return 1;
     }
+    return 0;
+}
 
+/**
+ * Checks whether an entry in the archive matches the specified type.
+ *
+ * @param tar_fd A file descriptor pointing to the start of a valid tar archive file.
+ * @param path A path to an entry in the archive.
+ * @param type_file String(s) specifying the expected type(s) of the entry ([DIRTYPE], [REGTYPE, AREGTYPE], [SYMTYPE, LNKTYPE]).
+ *
+ * @return 1 if the entry at the given path exists in the archive and matches the specified type,
+ *         0 otherwise. If the specified type is not recognized, the function returns 0.
+ */
+int is_x(int tar_fd, char *path, char *types_file)
+{
+    tar_header_t header;
+    while (1)
+    {
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
+
+        if (header.name[0] == '\0') break;
+        
+        // Check if the entry exists
+        if (strcmp(header.name, path) == 0)
+        {
+            // Check if the entry matches the specified type
+            if (((strlen(types_file) == 1) && (header.typeflag == types_file[0])) ||
+               ((strlen(types_file) == 2) && (header.typeflag == types_file[0] || header.typeflag == types_file[1])))
+                return 1;
+        }
+    }
     return 0;
 }
 
@@ -92,22 +132,7 @@ int exists(int tar_fd, char *path)
  */
 int is_dir(int tar_fd, char *path)
 {
-    tar_header_t header;
-    int ret = 0;
-    while (1)
-    {
-        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
-        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
-
-        if (header.name[0] == '\0') break;
-
-        if (strcmp(header.name, path) == 0)
-        {
-            if (header.typeflag == DIRTYPE) ret = 1;
-            break;
-        }
-    }
-    return ret;
+    return is_x(tar_fd, path, DIRTYPE);
 }
 
 /**
@@ -121,22 +146,10 @@ int is_dir(int tar_fd, char *path)
  */
 int is_file(int tar_fd, char *path)
 {
-    tar_header_t header;
-    int ret = 0;
-    while (1)
-    {
-        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
-        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
-
-        if (header.name[0] == '\0') break;
-
-        if (strcmp(header.name, path) == 0)
-        {
-            if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) ret = 1;
-            break;
-        }
-    }
-    return ret;
+    int types_file[2];
+    types_file[0] = REGTYPE;
+    types_file[1] = AREGTYPE;
+    return is_x(tar_fd, path, types_file);
 }
 
 /**
@@ -149,22 +162,10 @@ int is_file(int tar_fd, char *path)
  */
 int is_symlink(int tar_fd, char *path)
 {
-    tar_header_t header;
-    int ret = 0;
-    while (1)
-    {
-        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
-        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
-
-        if (header.name[0] == '\0') break;
-    
-        if (strcmp(header.name, path) == 0)
-        {
-            if (header.typeflag == SYMTYPE) ret = 1;
-            break;
-        }
-    }
-    return ret;
+    int types_file[2];
+    types_file[0] = SYMTYPE;
+    types_file[1] = LNKTYPE;
+    return is_x(tar_fd, path, types_file);
 }
 
 
@@ -192,26 +193,6 @@ int is_symlink(int tar_fd, char *path)
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
-    *no_entries = 0;
-    tar_header_t header;
-    while (1)
-    {
-        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
-        if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
-
-        if (header.name[0] == '\0') break;
-
-        if (strncmp(header.name, path, strlen(path)) == 0)
-        {
-            if (header.typeflag == DIRTYPE)
-            {
-                strncpy(entries[*no_entries], header.name, sizeof(header.name));
-                entries[*no_entries][sizeof(header.name) - 1] = '\0';
-                (*no_entries)++;
-            }
-        }
-    }
-    return (*no_entries == 0) ? 0 : 1;
 }
 
 /**
