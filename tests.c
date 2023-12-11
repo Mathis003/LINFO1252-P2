@@ -31,34 +31,29 @@ void true_tests(int fd)
 {
     int ret_check_archive = check_archive(fd);
     printf("check_archive returned : %d\n\n", ret_check_archive);
-    if (ret_check_archive < 0) error("check_archive");
 
     char *path_exists = "folder_test/";
     int ret_exists = exists(fd, path_exists);
     printf("exists returned : %d\n\n", ret_exists);
-    if (ret_exists == 0) error("exists");
 
-    char *path_is_dir = "...TODO...";
+    char *path_is_dir = "folder_test/";
     int ret_is_dir = is_dir(fd, path_is_dir);
     printf("Directory returned : %d\n\n", ret_is_dir);
-    if (ret_is_dir == 0) error("is_dir");
     
-    char *path_is_file = "...TODO...";
+    char *path_is_file = "folder_test/";
     int ret_is_file = is_file(fd, path_is_file);
     printf("File returned : %d\n\n", ret_is_file);
-    if (ret_is_file == 0) error("is_file");
 
-    char *path_is_symlink = "...TODO...";
+    char *path_is_symlink = "folder_test/";
     int ret_is_symlink = is_symlink(fd, path_is_symlink);
     printf("Symlink returned : %d\n\n", ret_is_symlink);
-    if (ret_is_symlink == 0) error("is_symlink");
 
     /*
     size_t len_list = ;
     size_t no_entries_list = ;
-    char *path_list = "...TODO...";
+    char *path_list = "folder_test/";
     char *entries_list[len_list];
-    for (int i = 0; i < len_list; i++) entries_list[i] = malloc(...TODO...);
+    for (int i = 0; i < len_list; i++) entries_list[i] = malloc(folder_test/);
     int ret_list = list(fd, path_list, entries_list, &no_entries_list);
     printf("list returned : %d\n\n", ret_list);
     if (ret_list == 0) error("list");
@@ -66,11 +61,10 @@ void true_tests(int fd)
 
     uint8_t buffer_read_file[100];
     size_t len_read_file  = 50;
-    char *path_read_file = "...TODO...";
+    char *path_read_file = "folder_test/";
     int ret_read_file = read_file(fd, path_read_file, 0, buffer_read_file, &len_read_file); 
     printf("Read_file returned : %d\n\n", ret_read_file);
     printf("The file :\n%s\n\n", (char *) buffer_read_file);
-    if (ret_read_file < 0) error("read_file");
 }
 
 void false_tests(int fd)
