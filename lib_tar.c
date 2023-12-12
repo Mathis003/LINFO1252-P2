@@ -32,25 +32,20 @@ void get_info_header(tar_header_t header, int id)
  */
 int check_archive(int tar_fd)
 {
-    // Déplace le curseur au début du fichier
-    lseek(tar_fd, 0, SEEK_SET);
-
     tar_header_t header;
     int valid_headers = 0;
     int number = 0;
-    
-    while (1)
-    {   
-        // Lis le header
-        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
 
-        // Si erreur de lecture
+    lseek(tar_fd, 0, SEEK_SET);
+
+    while (1)
+    { 
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
 
         // Si le header est vide
         if (header.name[0] == '\0') break;
 
-        // Informations pour debugger
         get_info_header(header, number);
 
         // Vérifie la valeur "magic"
@@ -95,18 +90,27 @@ int check_archive(int tar_fd)
  */
 int exists(int tar_fd, char *path)
 {
-    lseek(tar_fd, 0, SEEK_SET);
     tar_header_t header;
+    lseek(tar_fd, 0, SEEK_SET);
+
     while (1)
     {
         ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE) break;
 
+        // Si le header est vide
         if (header.name[0] == '\0') break;
 
-        // Check if the entry exists
+        // Vérifie si l'entrée existe
         if (strcmp(header.name, path) == 0) return 1;
+
+        // Déplace le curseur s'il y a un padding
+        if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
+
+        // Skip la lecture des fichiers
+        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
     }
+
     return 0;
 }
 
@@ -122,19 +126,21 @@ int exists(int tar_fd, char *path)
  */
 int is_x(int tar_fd, char *path, char *type_file)
 {
-    lseek(tar_fd, 0, SEEK_SET);
     tar_header_t header;
+    lseek(tar_fd, 0, SEEK_SET);
+
     while (1)
     {
         ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE) break;
 
+        // Si le header est vide
         if (header.name[0] == '\0') break;
         
-        // Check if the entry exists
+        // Vérifie si l'entrée existe
         if (strcmp(header.name, path) == 0)
         {
-            // Check if the entry matches the specified type
+            // Vérifie si l'entrée matche avec le type spécifié
             if (strcmp(type_file, "dir") == 0)
             {
                 if (header.typeflag == DIRTYPE)                                 return 1;
@@ -149,7 +155,14 @@ int is_x(int tar_fd, char *path, char *type_file)
             }
             else                                                                return -1;
         }
+
+        // Déplace le curseur s'il y a un padding
+        if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
+
+        // Skip la lecture des fichiers
+        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
     }
+    
     return 0;
 }
 
