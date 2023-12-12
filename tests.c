@@ -63,12 +63,12 @@ void true_tests(int fd)
         printf("%s\n", entries_list[i]);
     }
 
-    uint8_t buffer_read_file[60];
-    size_t len_read_file  = 60;
-    char *path_read_file = "subfolder_test/file2.txt";
-    int ret_read_file = read_file(fd, path_read_file, 0, buffer_read_file, &len_read_file); 
+    size_t len_read_file  = 63;
+    uint8_t *buffer_read_file = malloc(len_read_file * sizeof(char));
+    char *path_read_file = "folder_test/file1.txt";
+    size_t offset = 0;
+    int ret_read_file = read_file(fd, path_read_file, offset, buffer_read_file, &len_read_file); 
     printf("Read_file returned : %d\n\n", ret_read_file);
-
     printf("The file :\n%s\n\n", (char *) buffer_read_file);
 
 }
