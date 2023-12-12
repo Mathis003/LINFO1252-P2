@@ -279,26 +279,41 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
 {
     lseek(tar_fd, 0, SEEK_SET);
-    size_t max_length = *len;
-    if (offset < 0 || offset > max_length) return -2;
+    size_t dest_len = *len;
+    if (offset < 0 || offset > dest_len) return -2;
 
     tar_header_t header;
     while (1)
     {
-        ssize_t bytes_read = pread(tar_fd, &header, HEADER_SIZE, offset);
+        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE) break;
 
+        // Si le header est vide
         if (header.name[0] == '\0') break;
         
+        // Vérifie si l'entrée existe
         if (strcmp(header.name, path) == 0)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) read_file(tar_fd, header.linkname, offset, dest, len);
+            if (header.typeflag == AREGTYPE || header.typeflag == REGTYPE)
+            {
+                // Déplace le curseur s'il y a un padding
+                if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
 
-            bytes_read = pread(tar_fd, dest, TAR_INT(header.size), offset);
-            *len += bytes_read;
-            offset += TAR_INT(header.size);
+                lseek(tar_fd, offset, SEEK_CUR);
+                ssize_t bytes_file = read(tar_fd, dest, dest_len);
+                *len = dest_len - bytes_file;
+                
+                return *len;
+            }
         }
+
+        // Déplace le curseur s'il y a un padding
+        if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
+
+        // Skip la lecture des fichiers
+        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
     }
 
-    return (*len == max_length) ? 0 : (*len - max_length);
+    return -1;
 }                

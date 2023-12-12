@@ -59,10 +59,10 @@ void true_tests(int fd)
     if (ret_list == 0) error("list");
     */
 
-    uint8_t buffer_read_file[100];
-    size_t len_read_file  = 50;
-    char *path_read_file = "folder_test/";
-    int ret_read_file = read_file(fd, path_read_file, 0, buffer_read_file, &len_read_file); 
+    uint8_t buffer_read_file[500];
+    size_t len_read_file  = 500;
+    char *path_read_file = "folder_test/file1.txt";
+    int ret_read_file = read_file(fd, path_read_file, 10, buffer_read_file, &len_read_file); 
     printf("Read_file returned : %d\n\n", ret_read_file);
     printf("The file :\n%s\n\n", (char *) buffer_read_file);
 }
