@@ -5,9 +5,6 @@
 
 #include "lib_tar.h"
 
-/*
-You are free to use this file to write tests for your implementation
-*/
 
 void debug_dump(const uint8_t *bytes, size_t len)
 {
@@ -21,68 +18,65 @@ void debug_dump(const uint8_t *bytes, size_t len)
     }
 }
 
-void error(char *msg)
+void check_archive_test(int fd)
 {
-    perror(msg);
-    exit(1);
+    int ret = check_archive(fd);
+    printf("check_archive() returned : %d\n\n", ret);
 }
 
-void true_tests(int fd)
+void exists_test(int fd, char *path)
 {
-    int ret_check_archive = check_archive(fd);
-    printf("check_archive returned : %d\n\n", ret_check_archive);
+    int ret = exists(fd, path);
+    printf("exists() returned : %d\n\n", ret);
+}
 
-    char *path_exists = "folder_test/";
-    int ret_exists = exists(fd, path_exists);
-    printf("exists returned : %d\n\n", ret_exists);
-
-    char *path_is_dir = "folder_test/";
-    int ret_is_dir = is_dir(fd, path_is_dir);
-    printf("Directory returned : %d\n\n", ret_is_dir);
-    
-    char *path_is_file = "folder_test/file1.txt";
-    int ret_is_file = is_file(fd, path_is_file);
-    printf("File returned : %d\n\n", ret_is_file);
-
-    char *path_is_symlink = "folder_test/";
-    int ret_is_symlink = is_symlink(fd, path_is_symlink);
-    printf("Symlink returned : %d\n\n", ret_is_symlink);
-
-    char *path_list = "folder_test/";
-    size_t no_entries_list = 100;
-    char *entries_list[no_entries_list];
-    for (int i = 0; i < no_entries_list; i++) entries_list[i] = malloc(100 * sizeof(char));
-    
-    int ret_list = list(fd, path_list, entries_list, &no_entries_list);
-    printf("list returned : %d\n\n", ret_list);
-    if (ret_list == 0) error("list");
-
-    printf("The list :\n");
-    for (int i = 0; i < no_entries_list; i++)
+void is_x_test(int fd, char *path, char *type)
+{
+    int ret;
+    if (strcmp(type, "symlink") == 0)
     {
-        printf("%s\n", entries_list[i]);
+        ret = is_symlink(fd, path);
+        printf("is_symlink() returned : %d\n\n", ret);
     }
+    else if (strcmp(type, "file") == 0)
+    {
+        ret = is_file(fd, path);
+        printf("is_file returned : %d\n\n", ret);
+    }
+    else if (strcmp(type, "dir") == 0)
+    {
+        ret = is_dir(fd, path);
+        printf("is_dir() returned : %d\n\n", ret);
+    }
+}
 
-    size_t copy_len_read_file = 63;
-    size_t len_read_file  = 63;
-    uint8_t *buffer_read_file = malloc(len_read_file * sizeof(char));
-    char *path_read_file = "folder_test/file1.txt";
-    size_t offset = 0;
-    int ret_read_file = read_file(fd, path_read_file, offset, buffer_read_file, &len_read_file);
+void list_test(int fd, char *path, size_t no_entries)
+{
+    char *entries[no_entries];
+    for (int i = 0; i < no_entries; i++) entries[i] = malloc(100 * sizeof(char));
+    
+    int ret_list = list(fd, path, entries, &no_entries);
+
+    printf("list() returned : %d\n", ret_list);
+    printf("no_entries : %ld\n", no_entries);
+    printf("The list : [ ");
+    for (int i = 0; i < no_entries - 1; i++) printf("%s, ", entries[i]);
+    printf("%s ]\n\n", entries[no_entries - 1]);
+}
+
+
+void read_file_test(int fd, char *path, size_t offset, size_t len)
+{
+    size_t copy_len = len;
+    uint8_t *buffer = malloc(len * sizeof(char));
+    int ret_read_file = read_file(fd, path, offset, buffer, &len);
     if (ret_read_file > 0)
     {
-        if (len_read_file + ret_read_file != copy_len_read_file) printf("ERROR !!!\n");
+        if (len + ret_read_file != copy_len) printf("ERROR !!!\n");
     }
-    
-    printf("len_read_file : %ld\n", len_read_file);
-    printf("Read_file returned : %d\n\n", ret_read_file);
-    printf("The file :\n%s\n\n", (char *) buffer_read_file);
-
-}
-
-void false_tests(int fd)
-{
-    // TODO
+    printf("read_file() returned : %d\n", ret_read_file);
+    printf("len : %ld\n", len);
+    printf("The file :\n%s\n\n", (char *) buffer);
 }
 
 int main(int argc, char **argv)
@@ -90,18 +84,27 @@ int main(int argc, char **argv)
     if (argc < 2)
     {
         printf("Usage: %s tar_file\n", argv[0]);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     int fd = open(argv[1] , O_RDONLY);
     if (fd == -1)
     {
         perror("open(tar_file)");
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    true_tests(fd);
-    false_tests(fd);
+    // TEST : BEGIN
 
-    return 0;
+    check_archive_test(fd);
+    exists_test(fd, "folder_test/");
+    is_x_test(fd, "folder_test/", "file");
+    is_x_test(fd, "folder_test/", "dir");
+    is_x_test(fd, "folder_test/", "symlink");
+    list_test(fd, "folder_test/", 100);
+    read_file_test(fd, "folder_test/file1.txt", 0, 63);
+
+    // TEST : END
+
+    return EXIT_SUCCESS;
 }
