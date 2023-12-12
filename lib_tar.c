@@ -4,6 +4,17 @@
 
 const size_t HEADER_SIZE = sizeof(tar_header_t);
 
+void get_info_header(tar_header_t header, int id)
+{
+    printf("header %d\n", id);
+    printf("\theader.name : %s\n", header.name);
+    printf("\theader.typeflag : %c\n", header.typeflag);
+    printf("\theader.magic : %s\n", header.magic);
+    printf("\theader.version : %s\n", header.version);
+    printf("\theader.chksum : %ld\n\n", TAR_INT(header.chksum));
+}
+
+
 /**
  * Checks whether the archive is valid.
  *
@@ -24,24 +35,48 @@ int check_archive(int tar_fd)
     lseek(tar_fd, 0, SEEK_SET);
     tar_header_t header;
     int valid_headers = 0;
-
+    int number = 0;
     while (1)
     {
         ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
 
-        if (header.name[0] != '\0') break;
+        get_info_header(header, number);
+
+        if (header.name[0] == '\0')
+        {
+            break;
+        }
+
+        if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0)
+        {
+            return -1;
+        }
+
+        if (strncmp(header.version, TVERSION, TVERSLEN) != 0)
+        {
+            return -2;
+        }
+
+        long int chksum_calculated = 0;
+        int8_t *current_byte = (int8_t *) &header;
+
+        for (int i = 0; i < HEADER_SIZE; i++)
+        {
+            if (i >= 148 && i < 156) continue;
+            chksum_calculated += *(current_byte + i);
+        }
+
+        printf("chksum_calculated: %ld\n", chksum_calculated);
+
         
-        // Check magic value
-        if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0) return -1;
-
-        // Check version value
-        if (strncmp(header.version, TVERSION, TVERSLEN) != 0) return -2;
-
-        // Check checksum value
-        if (header.chksum[0] == '\0') return -3;
-
+        if (header.chksum[0] == '\0')
+        {
+            return -3;
+        }
+        
         valid_headers++;
+        number++;
     }
     return valid_headers;
 }

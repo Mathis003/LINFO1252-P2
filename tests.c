@@ -40,7 +40,7 @@ void true_tests(int fd)
     int ret_is_dir = is_dir(fd, path_is_dir);
     printf("Directory returned : %d\n\n", ret_is_dir);
     
-    char *path_is_file = "folder_test/";
+    char *path_is_file = "folder_test/file1.txt";
     int ret_is_file = is_file(fd, path_is_file);
     printf("File returned : %d\n\n", ret_is_file);
 
