@@ -247,7 +247,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         
         if (strcmp(header.name, path) == 0)
         {
-            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) list(tar_fd, header.linkname, entries, &nber_entries);
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return list(tar_fd, header.linkname, entries, &nber_entries);
             else if (header.typeflag == DIRTYPE)
             {
                 char *name_dir = header.name;
@@ -312,12 +312,13 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
 {
     lseek(tar_fd, 0, SEEK_SET);
     size_t dest_len = *len;
-    if (offset < 0 || offset > dest_len) return -2;
+    if (offset < 0) return -2;
 
     tar_header_t header;
+    ssize_t bytes_read;
     while (1)
     {
-        ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE) break;
 
         // Si le header est vide
@@ -326,17 +327,22 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
         // Vérifie si l'entrée existe
         if (strcmp(header.name, path) == 0)
         {
-            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) read_file(tar_fd, header.linkname, offset, dest, len);
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return read_file(tar_fd, header.linkname, offset, dest, len);
             if (header.typeflag == AREGTYPE || header.typeflag == REGTYPE)
             {
                 // Déplace le curseur s'il y a un padding
                 if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
 
+                long int nber_bytes_to_read = TAR_INT(header.size) - offset;
+                if (nber_bytes_to_read <= 0 || nber_bytes_to_read > TAR_INT(header.size)) return -2;
+
                 lseek(tar_fd, offset, SEEK_CUR);
-                ssize_t bytes_file = read(tar_fd, dest, dest_len);
-                *len = dest_len - bytes_file;
-                
-                return *len;
+                long int len_min = (nber_bytes_to_read > dest_len) ? dest_len : nber_bytes_to_read;
+                ssize_t nber_bytes_read = read(tar_fd, dest, len_min);
+                if (nber_bytes_read != len_min) break;
+
+                *len = len_min;
+                return (len_min == nber_bytes_to_read) ? 0 : (nber_bytes_to_read - dest_len);
             }
         }
 
