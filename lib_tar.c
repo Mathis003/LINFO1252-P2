@@ -32,52 +32,55 @@ void get_info_header(tar_header_t header, int id)
  */
 int check_archive(int tar_fd)
 {
+    // Déplace le curseur au début du fichier
     lseek(tar_fd, 0, SEEK_SET);
+
     tar_header_t header;
     int valid_headers = 0;
     int number = 0;
+    
     while (1)
-    {
+    {   
+        // Lis le header
         ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+
+        // Si erreur de lecture
         if (bytes_read == 0 || bytes_read != HEADER_SIZE) break;
 
+        // Si le header est vide
+        if (header.name[0] == '\0') break;
+
+        // Informations pour debugger
         get_info_header(header, number);
 
-        if (header.name[0] == '\0')
-        {
-            break;
-        }
+        // Vérifie la valeur "magic"
+        if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0) return -1;
 
-        if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0)
-        {
-            return -1;
-        }
+        // Vérifie la valeur "version"
+        if (strncmp(header.version, TVERSION, TVERSLEN) != 0) return -2;
 
-        if (strncmp(header.version, TVERSION, TVERSLEN) != 0)
-        {
-            return -2;
-        }
+        // Calcule le checksum
+        long int header_chksum = TAR_INT(header.chksum);
+        memset(header.chksum, ' ', 8);
 
         long int chksum_calculated = 0;
         int8_t *current_byte = (int8_t *) &header;
 
-        for (int i = 0; i < HEADER_SIZE; i++)
-        {
-            if (i >= 148 && i < 156) continue;
-            chksum_calculated += *(current_byte + i);
-        }
+        for (int i = 0; i < HEADER_SIZE; i++) chksum_calculated += *(current_byte + i);
 
-        printf("chksum_calculated: %ld\n", chksum_calculated);
+        // Vérifie le checksum
+        if (header_chksum != chksum_calculated) return -3;
 
-        
-        if (header.chksum[0] == '\0')
-        {
-            return -3;
-        }
+        // Déplace le curseur s'il y a un padding
+        if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
+
+        // Skip la lecture des fichiers
+        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
         
         valid_headers++;
         number++;
     }
+
     return valid_headers;
 }
 
