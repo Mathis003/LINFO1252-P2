@@ -233,28 +233,60 @@ int is_symlink(int tar_fd, char *path)
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
     lseek(tar_fd, 0, SEEK_SET);
-    tar_header_t header;
-    int iter = 0;
+    size_t nber_entries = *no_entries;
     *no_entries = 0;
+
+    tar_header_t header;
     while (1)
     {
         ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE) break;
 
+        // Si le header est vide
         if (header.name[0] == '\0') break;
         
-        // Check if the entry exists
         if (strcmp(header.name, path) == 0)
         {
-            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) list(tar_fd, header.linkname, entries, no_entries);
-            else
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) list(tar_fd, header.linkname, entries, &nber_entries);
+            else if (header.typeflag == DIRTYPE)
             {
-                entries[iter] = header.name;
-                (*no_entries)++;
-                iter++;
+                char *name_dir = header.name;
+
+                if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
+
+                tar_header_t entry_header = header;
+
+                bytes_read = read(tar_fd, &entry_header, HEADER_SIZE);
+                if (bytes_read != HEADER_SIZE) break;
+
+                while (strncmp(entry_header.name, name_dir, strlen(name_dir)) == 0)
+                {
+                
+                    // Si le header est vide
+                    if (entry_header.name[0] == '\0') break;
+
+                    memcpy(entries[*no_entries], entry_header.name, strlen(entry_header.name));
+                    (*no_entries)++;
+
+                    // Déplace le curseur s'il y a un padding
+                    if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
+
+                    // Skip la lecture des fichiers
+                    if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
+
+                    bytes_read = read(tar_fd, &entry_header, HEADER_SIZE);
+                    if (bytes_read != HEADER_SIZE) break;
+                }
             }
         }
+
+        // Déplace le curseur s'il y a un padding
+        if (TAR_INT(header.size) % HEADER_SIZE != 0) lseek(tar_fd, TAR_INT(header.padding), SEEK_CUR);
+
+        // Skip la lecture des fichiers
+        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
     }
+
     return *no_entries;
 }
 
