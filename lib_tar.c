@@ -248,6 +248,8 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                     memcpy(entries[listed_entries], entry_header.name, strlen(entry_header.name));
                     listed_entries++;
 
+                    if (nber_entries + 1 == listed_entries) break;
+
                     if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
 
                     bytes_read = read(tar_fd, &entry_header, HEADER_SIZE);
