@@ -225,16 +225,21 @@ char *skip_dir(int tar_fd, tar_header_t header)
     ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
 
     if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
-    char *name_header;
+    char *name_header = NULL;
+    printf("0");
+    printf("%s\n", name_dir);
     while (strncmp(name_dir, header.name, strlen(name_dir)) == 0)
     {
+        printf("1");
         bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
         name_header = header.name;
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+        printf("2");
     }
     free(name_dir);
+    fflush(stdout);
     return name_header;
 }
 
@@ -262,6 +267,13 @@ char *skip_dir(int tar_fd, tar_header_t header)
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
+    printf("list start path: %s\n",path);
+
+    for (size_t i = 0; i < *no_entries; i++) {
+        printf("%s\n", entries[i]);
+    }
+
+    
     size_t nber_entries = *no_entries;
     int listed_entries = 0;
 
@@ -269,16 +281,31 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     ssize_t bytes_read;
 
     lseek(tar_fd, 0, SEEK_SET);
+    
+    printf("1\n");
 
     while (1)
     {
+        printf("\n\n\nloop\n");
         bytes_read = read(tar_fd, &header, HEADER_SIZE);
+
+        
 
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
         
+
+
+
+
         if (strcmp(header.name, path) == 0)
         {
+            printf("header.name : %s\n", header.name);
+            printf("header.typeflag : %c\n", header.typeflag);
+            printf("header.magic : %s\n", header.magic);
+            printf("header.version : %s\n", header.version);
+            printf("header.chksum : %ld\n-------------------\n", TAR_INT(header.chksum));
+            printf("loop1\n");
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return list(tar_fd, header.linkname, entries, no_entries);
             else if (header.typeflag == DIRTYPE)
             {
@@ -290,6 +317,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
+                    printf("loop 2\n");
                     if (header.name[0] == '\0') break;
                     
                     char *name_entry = header.name;
@@ -303,13 +331,21 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                     
                     if (header.typeflag == DIRTYPE)
                     {
+                        printf("loop 3\n");
                         char *new_entry = skip_dir(tar_fd, header);
-                        
+                        // ! LE CODE CRASH ICI PCQ new_entry n'as pas de valeur 
+                        if (new_entry == NULL) {
+                            listed_entries++;
+                            break;
+                        }
+                        printf("strlen(new_entry) : %ld\n", strlen(new_entry));
                         memcpy(entries[listed_entries], new_entry, strlen(new_entry));
+                        printf("loop 4\n");
                         listed_entries++;
                         if (nber_entries + 1 == listed_entries) break;
                     }
-
+                    printf("loop 5\n");
+                    fflush(stdout);
                     memcpy(entries[listed_entries], name_entry, strlen(name_entry));
                     listed_entries++;
                     if (nber_entries + 1 == listed_entries) break;
@@ -324,10 +360,11 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 break;
             }
         }
+        printf("loop end\n");
 
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
     }
-
+    printf("list end\n");
     *no_entries = listed_entries;
     return *no_entries;
 }
