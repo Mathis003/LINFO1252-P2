@@ -42,7 +42,7 @@ int check_archive(int tar_fd)
 
         if (header.name[0] == '\0') break;
 
-        get_info_header(header, valid_headers); // Help to Debug
+        // get_info_header(header, valid_headers); // Help to Debug
 
         // Vérifie la valeur "magic"
         if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0) return -1;

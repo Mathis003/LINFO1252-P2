@@ -27,7 +27,7 @@ void check_archive_test(int fd, int expected)
 void exists_test(int fd, char *path, int expected)
 {
     int ret = exists(fd, path);
-    if (expected != ret) printf("ERROR : exists()\nReturn %d instead of %d [args : path = %s ]\n", ret, expected, path);
+    if (expected != ret) printf("ERROR : exists()\nReturn %d instead of %d\n[args : path = %s ]\n", ret, expected, path);
 }
 
 void is_x_test(int fd, char *path, char *type, int expected)
@@ -49,40 +49,68 @@ void is_x_test(int fd, char *path, char *type, int expected)
         ret = is_dir(fd, path);
         function_name = "is_dir";
     }
-    if (expected != ret) printf("ERROR : %s()\nReturn %d instead of %d [args : path = %s ]\n", function_name, ret, expected, path);
+    if (expected != ret) printf("ERROR : %s()\nReturn %d instead of %d\n[args : path = %s ]\n", function_name, ret, expected, path);
 }
 
-void list_test(int fd, char *path, size_t no_entries)
+int cmper_str(const void *a, const void *b)
 {
-    // TODO
+    return strcmp(*(const char **)a, *(const char **)b);
+}
+
+void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expected_no_entries, char *expected_entries[])
+{
+    size_t copy_no_entries = no_entries;
     char *entries[no_entries];
-    for (int i = 0; i < no_entries; i++) entries[i] = malloc(100 * sizeof(char));
-    
-    int ret_list = list(fd, path, entries, &no_entries);
+    for (int i = 0; i < no_entries; i++) entries[i] = calloc(sizeof(char), 100);
+    int ret = list(fd, path, entries, &no_entries);
 
-    printf("list() returned : %d\n", ret_list);
-    printf("no_entries : %ld\n", no_entries);
-    printf("The list : [ ");
+    int error = 1;
+    if (expected_ret != ret) error = 0;
+    if (expected_no_entries != no_entries) error = 0;
 
-    if (no_entries == 0) printf(" ]\n\n");
-    else if (no_entries == 1) printf("%s ]\n\n", entries[0]);
-    else
+    qsort(expected_entries, expected_no_entries, sizeof(char *), cmper_str);
+    qsort(entries, expected_no_entries, sizeof(char *), cmper_str);
+
+    for (int i = 0; i < expected_no_entries; i++)
     {
-        for (size_t i = 0; i < no_entries; i++) printf("%s, ", entries[i]);
-        printf("%s ]\n\n", entries[no_entries - 1]);
+        if (strcmp(expected_entries[i], entries[i]) != 0)
+        {
+            error = 0;
+            break;
+        }
     }
+    
+    if (error == 0)
+    {
+        char entries_str[100000] = "[ ";
+        char expected_entries_str[100000] = "[ ";
+        for (int i = 0; i < expected_no_entries; i++)
+        {
+            strcat(expected_entries_str, expected_entries[i]);
+            strcat(expected_entries_str, ", ");
+            strcat(entries_str, entries[i]);
+            strcat(entries_str, ", ");
+        }
+        strcat(expected_entries_str, "]");
+        strcat(entries_str, "]");
+        
+        printf("ERROR : list() [args : path = %s , no_entries = %ld ]\n", path, copy_no_entries);
+        printf("no_entries = %ld AND expected_no_entries = %d\n", no_entries, expected_no_entries);
+        printf("ret = %d AND expected_ret = %d\n", ret, expected_ret);
+        printf("entries = %s AND expected_entries = %s\n", entries_str, expected_entries_str);
+    }
+
+    for (int i = 0; i < no_entries; i++) free(entries[i]);
 }
 
 
-void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_ret, int expected_len, int verbose)
+void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_ret, int expected_len, char *expected_buffer)
 {
-    size_t copy_len = len;
-    uint8_t *buffer = malloc(len * sizeof(char));
+    uint8_t *buffer = calloc(sizeof(char), len);
     int ret = read_file(fd, path, offset, buffer, &len);
-    if (expected_ret != ret) printf("ERROR : read_file()\nReturn %d instead of %d [args : path = %s ]\n", ret, expected_ret, path);
-    if (expected_len != len) printf("ERROR : read_file()\nlen = %d instead of len = %d [args : path = %s ]\n", len, expected_len, path);
-
-    if (verbose) printf("The file :\n%s\n\n", (char *) buffer);
+    if (expected_ret != ret) printf("ERROR : read_file()\nReturn %d instead of %d\n[args : path = %s ]\n", ret, expected_ret, path);
+    if (expected_len != len) printf("ERROR : read_file()\nlen = %ld instead of len = %d\n[args : path = %s ]\n", len, expected_len, path);
+    if (strcmp(expected_buffer, (char *) buffer) != 0) printf("ERROR : read_file()\nbuffer = %s instead of buffer = %s\n[args : path = %s ]\n", buffer, expected_buffer, path);
     free(buffer);
 }
 
@@ -121,40 +149,50 @@ int main(int argc, char **argv)
     // *** exists_test() : END ***
 
 
-    // TODO !
-
-
     // *** is_x_test() : BEGIN ***
-    is_x_test(fd, "", "file", 1);
-    is_x_test(fd, "", "file", 1);
-    is_x_test(fd, "", "file", 1);
-    is_x_test(fd, "", "file", 0);
-    is_x_test(fd, "", "file", 0);
-    is_x_test(fd, "", "file", 0);
+    is_x_test(fd, "folder1/subfolder1_1/file1_2.txt", "file", 1);
+    is_x_test(fd, "folder1/file1.txt", "file", 1);
+    is_x_test(fd, "folder3/file3_1.txt", "file", 1);
+    is_x_test(fd, "folder1/subfolder1_1/", "file", 0);
+    is_x_test(fd, "symlink1", "file", 0);
+    is_x_test(fd, "folder3/", "file", 0);
 
-    is_x_test(fd, "", "dir", 1);
-    is_x_test(fd, "", "dir", 1);
-    is_x_test(fd, "", "dir", 1);
-    is_x_test(fd, "", "dir", 0);
-    is_x_test(fd, "", "dir", 0);
-    is_x_test(fd, "", "dir", 0);
+    is_x_test(fd, "folder1/subfolder1_1/", "dir", 1);
+    is_x_test(fd, "folder1/", "dir", 1);
+    is_x_test(fd, "folder3/", "dir", 1);
+    is_x_test(fd, "symlink1", "dir", 0);
+    is_x_test(fd, "folder1/file1.txt", "dir", 0);
+    is_x_test(fd, "symlink4", "dir", 0);
 
-    is_x_test(fd, "", "symlink", 1);
-    is_x_test(fd, "", "symlink", 1);
-    is_x_test(fd, "", "symlink", 1);
-    is_x_test(fd, "", "symlink", 0);
-    is_x_test(fd, "", "symlink", 0);
-    is_x_test(fd, "", "symlink", 0);
+    is_x_test(fd, "folder1/symlink2", "symlink", 1);
+    is_x_test(fd, "symlink1", "symlink", 1);
+    is_x_test(fd, "symlink4", "symlink", 1);
+    is_x_test(fd, "folder1/subfolder1_1/", "symlink", 0);
+    is_x_test(fd, "folder3/", "symlink", 0);
+    is_x_test(fd, "folder1/subfolder1_1/file1_2.txt", "symlink", 0);
     // *** is_x_test() : END ***
 
 
     // *** list_test() : BEGIN ***
-    list_test(fd, "", 100);
+    // fd - path - no_entries - expected_ret - expected_no_entries - expected_entries
+    char *expected_entries[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder1/folder3/file3_1.txt"};
+    list_test(fd, "folder1/", 5, 3, 3, expected_entries);
     // *** list_test() : END ***
 
 
     // *** read_file_test() : BEGIN ***
-    read_file_test(fd, "", 0, 63, 0, 0, 0);
+    // fd - path - offset - len - expected_ret - expected_len - expected_buffer
+    read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 0, 1000, 0, 342, "My fellow citizens, let us embrace the dawn of a new era.\nIn the symphony of democracy, every note contributes to the melody of progress.\nWe must be the architects of our shared destiny, champions of justice, and stewards of liberty.\nTogether, we navigate the uncharted waters of the future, anchored by the values that define us as a people.");
+    read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 0, 342, 0, 342, "My fellow citizens, let us embrace the dawn of a new era.\nIn the symphony of democracy, every note contributes to the melody of progress.\nWe must be the architects of our shared destiny, champions of justice, and stewards of liberty.\nTogether, we navigate the uncharted waters of the future, anchored by the values that define us as a people.");
+    read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 0, 76, 266, 76, "My fellow citizens, let us embrace the dawn of a new era.\nIn the symphony of");
+    read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 100, 242, 0, 242, "ontributes to the melody of progress.\nWe must be the architects of our shared destiny, champions of justice, and stewards of liberty.\nTogether, we navigate the uncharted waters of the future, anchored by the values that define us as a people.");
+    read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 341, 1, 0, 1, ".");
+
+    read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 342, 0, -2, 0, "");
+    read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", -1, 0, -2, 0, "");
+
+    read_file_test(fd, "folder1/subfolder1_1/doesnt_exist.txt", 0, 1000, -1, 0, "");
+    read_file_test(fd, "folder1/", 0, 1000, -1, 0, "");
     // *** read_file_test() : END ***
 
     return EXIT_SUCCESS;
