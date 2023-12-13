@@ -179,14 +179,14 @@ int main(int argc, char **argv)
     // *** list_test() : BEGIN ***
     // fd - path - no_entries - expected_ret - expected_no_entries - expected_entries
     char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder3/file3_1.txt"};
-    printf("list test 1\n");
+    printf("\n\nTEST 1\n");
     list_test(fd, "folder1/", 5, 3, 3, expected_entries_1);
     char *expected_entries_2[] = {"folder3/file3_1.txt"};
-    printf("list test 2\n");
+    printf("\n\nTEST 2\n");
     list_test(fd, "folder3/", 3, 1, 1, expected_entries_2);
 
-    char *expected_entries_3[] = {"folder2/subfolder2_1", "folder2/subfolder2_2", "folder3/file3_1.txt", "folder2/subfolder2_2/"};
-    printf("list test 3\n");
+    char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder3/file3_1.txt", "folder2/subfolder2_2/"};
+    printf("\n\nTEST 3\n");
     list_test(fd, "folder2/", 4, 4, 4, expected_entries_3);
     // *** list_test() : END ***
 

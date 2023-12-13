@@ -226,20 +226,15 @@ char *skip_dir(int tar_fd, tar_header_t header)
 
     if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
     char *name_header = NULL;
-    printf("0");
-    printf("%s\n", name_dir);
     while (strncmp(name_dir, header.name, strlen(name_dir)) == 0)
     {
-        printf("1");
         bytes_read = read(tar_fd, &header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
         name_header = header.name;
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
-        printf("2");
     }
     free(name_dir);
-    fflush(stdout);
     return name_header;
 }
 
@@ -317,34 +312,33 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
-                    printf("loop 2\n");
+                    printf("loop 2 %s--------------------------------------------------------------- \n ", header.name);
                     if (header.name[0] == '\0') break;
                     
                     char *name_entry = header.name;
                     
                     if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
                     {
+                        printf("found symlink \n");
                         long current_cursor_pos = lseek(tar_fd, 0, SEEK_CUR);
                         name_entry = looped_symlinks(tar_fd, header.linkname);
+                        printf("name_entry : %s\n", name_entry);
                         lseek(tar_fd, current_cursor_pos, SEEK_SET);
                     }
                     
                     if (header.typeflag == DIRTYPE)
                     {
-                        printf("loop 3\n");
                         char *new_entry = skip_dir(tar_fd, header);
                         // ! LE CODE CRASH ICI PCQ new_entry n'as pas de valeur 
                         if (new_entry == NULL) {
+                            memcpy(entries[listed_entries], name_entry, strlen(name_entry));
                             listed_entries++;
                             break;
                         }
-                        printf("strlen(new_entry) : %ld\n", strlen(new_entry));
                         memcpy(entries[listed_entries], new_entry, strlen(new_entry));
-                        printf("loop 4\n");
                         listed_entries++;
                         if (nber_entries + 1 == listed_entries) break;
                     }
-                    printf("loop 5\n");
                     fflush(stdout);
                     memcpy(entries[listed_entries], name_entry, strlen(name_entry));
                     listed_entries++;
