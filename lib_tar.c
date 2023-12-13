@@ -6,6 +6,7 @@ void get_info_header(tar_header_t header, int id)
 {
     printf("header %d\n", id);
     printf("\theader.name : %s\n", header.name);
+    printf("\theader.size : %ld\n", TAR_INT(header.size));
     printf("\theader.typeflag : %c\n", header.typeflag);
     printf("\theader.magic : %s\n", header.magic);
     printf("\theader.version : %s\n", header.version);
@@ -42,7 +43,7 @@ int check_archive(int tar_fd)
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
 
-        // get_info_header(header, nber_valid_headers); // Help to Debug
+        get_info_header(header, nber_valid_headers); // Help to Debug
 
         // Vérifie la valeur "magic"
         if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0) return -1;
@@ -296,10 +297,20 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                         listed_entries++;
                         if (nber_entries + 1 == listed_entries) break;
 
-                        if (TAR_INT(header.size) / HEADER_SIZE > 0) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+                        /*
+                        ...Problème ICI...
+                        */
+
+                        printf("header_name1 : %s\n", header.name);
+                        printf("header_size1 : %ld\n", TAR_INT(header.size));
+
+                        lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
 
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
                         if (bytes_read != HEADER_SIZE) break;
+
+                        printf("header_name2 : %s\n", header.name);
+                        printf("header_size2 : %ld\n\n\n", TAR_INT(header.size));
                     }
 
                     else if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
