@@ -18,10 +18,10 @@ void debug_dump(const uint8_t *bytes, size_t len)
     }
 }
 
-void check_archive_test(int fd)
+void check_archive_test(int fd, int expected)
 {
     int ret = check_archive(fd);
-    printf("check_archive() returned : %d\n\n", ret);
+    if (expected != ret) printf("ERROR : check_archive()\nReturn %d instead of %d\n", ret, expected);
 }
 
 void exists_test(int fd, char *path, int expected)
@@ -30,28 +30,31 @@ void exists_test(int fd, char *path, int expected)
     if (expected != ret) printf("ERROR : exists()\nReturn %d instead of %d [args : path = %s ]\n", ret, expected, path);
 }
 
-void is_x_test(int fd, char *path, char *type)
+void is_x_test(int fd, char *path, char *type, int expected)
 {
     int ret;
+    char *function_name;
     if (strcmp(type, "symlink") == 0)
     {
         ret = is_symlink(fd, path);
-        printf("is_symlink() returned : %d\n\n", ret);
+        function_name = "is_symlink";
     }
     else if (strcmp(type, "file") == 0)
     {
         ret = is_file(fd, path);
-        printf("is_file returned : %d\n\n", ret);
+        function_name = "is_file";
     }
     else if (strcmp(type, "dir") == 0)
     {
         ret = is_dir(fd, path);
-        printf("is_dir() returned : %d\n\n", ret);
+        function_name = "is_dir";
     }
+    if (expected != ret) printf("ERROR : %s()\nReturn %d instead of %d [args : path = %s ]\n", function_name, ret, expected, path);
 }
 
 void list_test(int fd, char *path, size_t no_entries)
 {
+    // TODO
     char *entries[no_entries];
     for (int i = 0; i < no_entries; i++) entries[i] = malloc(100 * sizeof(char));
     
@@ -71,18 +74,16 @@ void list_test(int fd, char *path, size_t no_entries)
 }
 
 
-void read_file_test(int fd, char *path, size_t offset, size_t len)
+void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_ret, int expected_len, int verbose)
 {
     size_t copy_len = len;
     uint8_t *buffer = malloc(len * sizeof(char));
-    int ret_read_file = read_file(fd, path, offset, buffer, &len);
-    if (ret_read_file > 0)
-    {
-        if (len + ret_read_file != copy_len) printf("ERROR !!!\n");
-    }
-    printf("read_file() returned : %d\n", ret_read_file);
-    printf("len : %ld\n", len);
-    printf("The file :\n%s\n\n", (char *) buffer);
+    int ret = read_file(fd, path, offset, buffer, &len);
+    if (expected_ret != ret) printf("ERROR : read_file()\nReturn %d instead of %d [args : path = %s ]\n", ret, expected_ret, path);
+    if (expected_len != len) printf("ERROR : read_file()\nlen = %d instead of len = %d [args : path = %s ]\n", len, expected_len, path);
+
+    if (verbose) printf("The file :\n%s\n\n", (char *) buffer);
+    free(buffer);
 }
 
 int main(int argc, char **argv)
@@ -100,10 +101,12 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    // TEST : BEGIN
+    // *** check_archive_test() : BEGIN ***
+    check_archive_test(fd, 15);
+    // *** check_archive_test() : END ***
 
-    check_archive_test(fd);
 
+    // *** exists_test() : BEGIN ***
     exists_test(fd, "folder1/file1.txt", 1);
     exists_test(fd, "folder1/subfolder1_1/file1_2.txt", 1);
     exists_test(fd, "folder3/", 1);
@@ -115,20 +118,44 @@ int main(int argc, char **argv)
     exists_test(fd, "doesnt_exist.txt", 0);
     exists_test(fd, "doesnt_exist_symlink", 0);
     exists_test(fd, "folder_doesnt_exist/", 0);
+    // *** exists_test() : END ***
 
-    is_x_test(fd, "folder1_test/file3.txt", "file");
-    is_x_test(fd, "folder2_test/", "file");
 
-    is_x_test(fd, "folder1_test/file3.txt", "dir");
-    is_x_test(fd, "folder2_test/", "dir");
+    // TODO !
 
-    is_x_test(fd, "folder1_test/file3.txt", "symlink");
-    is_x_test(fd, "folder2_test/", "symlink");
 
-    list_test(fd, "folder_test/", 100);
-    read_file_test(fd, "folder_test/file1.txt", 0, 63);
+    // *** is_x_test() : BEGIN ***
+    is_x_test(fd, "", "file", 1);
+    is_x_test(fd, "", "file", 1);
+    is_x_test(fd, "", "file", 1);
+    is_x_test(fd, "", "file", 0);
+    is_x_test(fd, "", "file", 0);
+    is_x_test(fd, "", "file", 0);
 
-    // TEST : END
+    is_x_test(fd, "", "dir", 1);
+    is_x_test(fd, "", "dir", 1);
+    is_x_test(fd, "", "dir", 1);
+    is_x_test(fd, "", "dir", 0);
+    is_x_test(fd, "", "dir", 0);
+    is_x_test(fd, "", "dir", 0);
+
+    is_x_test(fd, "", "symlink", 1);
+    is_x_test(fd, "", "symlink", 1);
+    is_x_test(fd, "", "symlink", 1);
+    is_x_test(fd, "", "symlink", 0);
+    is_x_test(fd, "", "symlink", 0);
+    is_x_test(fd, "", "symlink", 0);
+    // *** is_x_test() : END ***
+
+
+    // *** list_test() : BEGIN ***
+    list_test(fd, "", 100);
+    // *** list_test() : END ***
+
+
+    // *** read_file_test() : BEGIN ***
+    read_file_test(fd, "", 0, 63, 0, 0, 0);
+    // *** read_file_test() : END ***
 
     return EXIT_SUCCESS;
 }
