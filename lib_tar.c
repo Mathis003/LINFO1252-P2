@@ -244,8 +244,11 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 while (strncmp(entry_header.name, name_dir, strlen(name_dir)) == 0)
                 {
                     if (entry_header.name[0] == '\0') break;
+                    
+                    char *name = entry_header.name;
+                    if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) name = entry_header.linkname;
 
-                    memcpy(entries[listed_entries], entry_header.name, strlen(entry_header.name));
+                    memcpy(entries[listed_entries], name, strlen(name));
                     listed_entries++;
 
                     if (nber_entries + 1 == listed_entries) break;

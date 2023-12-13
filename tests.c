@@ -60,8 +60,14 @@ void list_test(int fd, char *path, size_t no_entries)
     printf("list() returned : %d\n", ret_list);
     printf("no_entries : %ld\n", no_entries);
     printf("The list : [ ");
-    for (int i = 0; i < no_entries - 1; i++) printf("%s, ", entries[i]);
-    printf("%s ]\n\n", entries[no_entries - 1]);
+
+    if (no_entries == 0) printf(" ]\n\n");
+    else if (no_entries == 1) printf("%s ]\n\n", entries[0]);
+    else
+    {
+        for (size_t i = 0; i < no_entries; i++) printf("%s, ", entries[i]);
+        printf("%s ]\n\n", entries[no_entries - 1]);
+    }
 }
 
 
@@ -97,10 +103,17 @@ int main(int argc, char **argv)
     // TEST : BEGIN
 
     check_archive_test(fd);
-    exists_test(fd, "folder_test/");
-    is_x_test(fd, "folder_test/", "file");
-    is_x_test(fd, "folder_test/", "dir");
-    is_x_test(fd, "folder_test/", "symlink");
+    exists_test(fd, "folder1_test/file3.txt");
+
+    is_x_test(fd, "folder1_test/file3.txt", "file");
+    is_x_test(fd, "folder2_test/", "file");
+
+    is_x_test(fd, "folder1_test/file3.txt", "dir");
+    is_x_test(fd, "folder2_test/", "dir");
+
+    is_x_test(fd, "folder1_test/file3.txt", "symlink");
+    is_x_test(fd, "folder2_test/", "symlink");
+
     list_test(fd, "folder_test/", 100);
     read_file_test(fd, "folder_test/file1.txt", 0, 63);
 
