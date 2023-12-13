@@ -296,6 +296,8 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                         listed_entries++;
                         if (nber_entries + 1 == listed_entries) break;
 
+                        if (TAR_INT(header.size) / HEADER_SIZE > 0) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
                         if (bytes_read != HEADER_SIZE) break;
                     }
