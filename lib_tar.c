@@ -193,6 +193,51 @@ int is_symlink(int tar_fd, char *path)
 }
 
 
+char *looped_symlinks(int tar_fd, char *header_name)
+{
+    tar_header_t header;
+    ssize_t bytes_read;
+
+    lseek(tar_fd, 0, SEEK_SET);
+
+    while (1)
+    {
+        bytes_read = read(tar_fd, &header, HEADER_SIZE);
+
+        if (bytes_read != HEADER_SIZE) break;
+        if (header.name[0] == '\0')    break;
+
+        if (strcmp(header.name, header_name) == 0)
+        {
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return looped_symlinks(tar_fd, header.linkname);
+            return header_name;
+        }
+        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+    }
+    return NULL;
+}
+
+char *skip_dir(int tar_fd, tar_header_t header)
+{
+    char *name_dir = (char *) malloc(strlen(header.name) * sizeof(char));
+    memcpy(name_dir, header.name, strlen(header.name));
+
+    ssize_t bytes_read = read(tar_fd, &header, HEADER_SIZE);
+
+    if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+    char *name_header;
+    while (strncmp(name_dir, header.name, strlen(name_dir)) == 0)
+    {
+        bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (bytes_read != HEADER_SIZE) break;
+        if (header.name[0] == '\0')    break;
+        name_header = header.name;
+        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+    }
+    free(name_dir);
+    return name_header;
+}
+
 /**
  * Lists the entries at a given path in the archive.
  * list() does not recurse into the directories listed at the given path.
@@ -228,38 +273,54 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     while (1)
     {
         bytes_read = read(tar_fd, &header, HEADER_SIZE);
-        if (bytes_read != HEADER_SIZE) break;
 
-        if (header.name[0] == '\0') break;
+        if (bytes_read != HEADER_SIZE) break;
+        if (header.name[0] == '\0')    break;
         
         if (strcmp(header.name, path) == 0)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return list(tar_fd, header.linkname, entries, no_entries);
             else if (header.typeflag == DIRTYPE)
             {
-                char *name_dir = header.name;
-                tar_header_t entry_header;
+                char *name_dir = (char *) malloc(sizeof(char) * strlen(header.name));
+                memcpy(name_dir, header.name, strlen(header.name));
 
-                bytes_read = read(tar_fd, &entry_header, HEADER_SIZE);
+                bytes_read = read(tar_fd, &header, HEADER_SIZE);
                 if (bytes_read != HEADER_SIZE) break;
 
-                while (strncmp(entry_header.name, name_dir, strlen(name_dir)) == 0)
+                while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
-                    if (entry_header.name[0] == '\0') break;
+                    if (header.name[0] == '\0') break;
                     
-                    char *name = entry_header.name;
-                    if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) name = entry_header.linkname;
+                    char *name_entry = header.name;
+                    
+                    if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
+                    {
+                        long current_cursor_pos = lseek(tar_fd, 0, SEEK_CUR);
+                        name_entry = looped_symlinks(tar_fd, header.linkname);
+                        lseek(tar_fd, current_cursor_pos, SEEK_SET);
+                    }
+                    
+                    if (header.typeflag == DIRTYPE)
+                    {
+                        char *new_entry = skip_dir(tar_fd, header);
+                        
+                        memcpy(entries[listed_entries], new_entry, strlen(new_entry));
+                        listed_entries++;
+                        if (nber_entries + 1 == listed_entries) break;
+                    }
 
-                    memcpy(entries[listed_entries], name, strlen(name));
+                    memcpy(entries[listed_entries], name_entry, strlen(name_entry));
                     listed_entries++;
-
                     if (nber_entries + 1 == listed_entries) break;
 
                     if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
 
-                    bytes_read = read(tar_fd, &entry_header, HEADER_SIZE);
+                    bytes_read = read(tar_fd, &header, HEADER_SIZE);
                     if (bytes_read != HEADER_SIZE) break;
                 }
+
+                free(name_dir);
                 break;
             }
         }
@@ -338,4 +399,4 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
 
     *len = 0;
     return -1;
-}                
+}

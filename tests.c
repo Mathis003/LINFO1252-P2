@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     exists_test(fd, "folder1/subfolder1_1/file1_2.txt", 1);
     exists_test(fd, "folder3/", 1);
     exists_test(fd, "folder2/subfolder2_1/", 1);
-    exists_test(fd, "symlink4", 1);
+    exists_test(fd, "symlink1", 1);
     exists_test(fd, "folder2/symlink3", 1);
 
     exists_test(fd, "folder2/subfolder2_1/inconnue.txt", 0);
@@ -162,11 +162,11 @@ int main(int argc, char **argv)
     is_x_test(fd, "folder3/", "dir", 1);
     is_x_test(fd, "symlink1", "dir", 0);
     is_x_test(fd, "folder1/file1.txt", "dir", 0);
-    is_x_test(fd, "symlink4", "dir", 0);
+    is_x_test(fd, "folder2/symlink4", "dir", 0);
 
     is_x_test(fd, "folder1/symlink2", "symlink", 1);
     is_x_test(fd, "symlink1", "symlink", 1);
-    is_x_test(fd, "symlink4", "symlink", 1);
+    is_x_test(fd, "folder2/symlink4", "symlink", 1);
     is_x_test(fd, "folder1/subfolder1_1/", "symlink", 0);
     is_x_test(fd, "folder3/", "symlink", 0);
     is_x_test(fd, "folder1/subfolder1_1/file1_2.txt", "symlink", 0);
@@ -175,8 +175,13 @@ int main(int argc, char **argv)
 
     // *** list_test() : BEGIN ***
     // fd - path - no_entries - expected_ret - expected_no_entries - expected_entries
-    char *expected_entries[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder1/folder3/file3_1.txt"};
-    list_test(fd, "folder1/", 5, 3, 3, expected_entries);
+    char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder3/file3_1.txt"};
+    list_test(fd, "folder1/", 5, 3, 3, expected_entries_1);
+    char *expected_entries_2[] = {"folder3/file3_1.txt"};
+    list_test(fd, "folder3/", 3, 1, 1, expected_entries_2);
+
+    char *expected_entries_3[] = {"folder2/subfolder2_1", "folder2/subfolder2_2", "folder3/file3_1.txt", "folder2/subfolder2_2/"};
+    list_test(fd, "folder2/", 4, 4, 4, expected_entries_3);
     // *** list_test() : END ***
 
 
