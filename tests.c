@@ -24,10 +24,10 @@ void check_archive_test(int fd)
     printf("check_archive() returned : %d\n\n", ret);
 }
 
-void exists_test(int fd, char *path)
+void exists_test(int fd, char *path, int expected)
 {
     int ret = exists(fd, path);
-    printf("exists() returned : %d\n\n", ret);
+    if (expected != ret) printf("ERROR : exists()\nReturn %d instead of %d [args : path = %s ]\n", ret, expected, path);
 }
 
 void is_x_test(int fd, char *path, char *type)
@@ -103,7 +103,18 @@ int main(int argc, char **argv)
     // TEST : BEGIN
 
     check_archive_test(fd);
-    exists_test(fd, "folder1_test/file3.txt");
+
+    exists_test(fd, "folder1/file1.txt", 1);
+    exists_test(fd, "folder1/subfolder1_1/file1_2.txt", 1);
+    exists_test(fd, "folder3/", 1);
+    exists_test(fd, "folder2/subfolder2_1/", 1);
+    exists_test(fd, "symlink4", 1);
+    exists_test(fd, "folder2/symlink3", 1);
+
+    exists_test(fd, "folder2/subfolder2_1/inconnue.txt", 0);
+    exists_test(fd, "doesnt_exist.txt", 0);
+    exists_test(fd, "doesnt_exist_symlink", 0);
+    exists_test(fd, "folder_doesnt_exist/", 0);
 
     is_x_test(fd, "folder1_test/file3.txt", "file");
     is_x_test(fd, "folder2_test/", "file");
