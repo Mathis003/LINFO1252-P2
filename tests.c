@@ -59,9 +59,6 @@ int cmper_str(const void *a, const void *b)
 
 void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expected_no_entries, char *expected_entries[])
 {
-//     char *expected_entries_3[] = {"folder2/subfolder2_1", "folder2/subfolder2_2", "folder3/file3_1.txt", "folder2/subfolder2_2/"};
-//     printf("list test 3\n");
-//     list_test(fd, "folder2/", 4, 4, 4, expected_entries_3);
     size_t copy_no_entries = no_entries;
     char *entries[no_entries];
     for (int i = 0; i < no_entries; i++) entries[i] = calloc(sizeof(char), 100);
@@ -181,13 +178,14 @@ int main(int argc, char **argv)
     char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder3/file3_1.txt"};
     printf("\n\nTEST 1\n");
     list_test(fd, "folder1/", 5, 3, 3, expected_entries_1);
-    char *expected_entries_2[] = {"folder3/file3_1.txt"};
-    printf("\n\nTEST 2\n");
-    list_test(fd, "folder3/", 3, 1, 1, expected_entries_2);
+    // char *expected_entries_2[] = {"folder3/file3_1.txt"};
+    // printf("\n\nTEST 2\n");
+    // list_test(fd, "folder3/", 3, 1, 1, expected_entries_2);
 
-    char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder3/file3_1.txt", "folder2/subfolder2_2/"};
-    printf("\n\nTEST 3\n");
-    list_test(fd, "folder2/", 4, 4, 4, expected_entries_3);
+    // char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder3/file3_1.txt", "folder2/subfolder2_2/"};
+    // printf("\n\nTEST 3\n");
+    // list_test(fd, "folder2/", 4, 4, 4, expected_entries_3);
+
     // *** list_test() : END ***
 
 

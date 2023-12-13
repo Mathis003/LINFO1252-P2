@@ -58,6 +58,7 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
     "typeinfo": "c",
-    "type_traits": "c"
+    "type_traits": "c",
+    "string.h": "c"
   }
 }
