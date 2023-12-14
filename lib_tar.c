@@ -246,7 +246,7 @@ int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nb
 {
     memcpy(entries[*listed_entries], name_entry, strlen(name_entry));
     (*listed_entries)++;
-    if (nber_entries + 1 == *listed_entries) return -1;
+    if (nber_entries == *listed_entries) return -1;
     return 0;
 }
 
