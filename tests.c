@@ -83,12 +83,17 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
     {
         char entries_str[100000] = "[ ";
         char expected_entries_str[100000] = "[ ";
-        for (int i = 0; i < expected_no_entries; i++)
+        for (int i = 0; i < expected_no_entries - 1; i++)
         {
             strcat(expected_entries_str, expected_entries[i]);
             strcat(expected_entries_str, ", ");
             strcat(entries_str, entries[i]);
             strcat(entries_str, ", ");
+        }
+        if (expected_no_entries - 1 >= 0)
+        {
+            strcat(expected_entries_str, expected_entries[expected_no_entries - 1]);
+            strcat(entries_str, entries[expected_no_entries - 1]);
         }
         strcat(expected_entries_str, "]");
         strcat(entries_str, "]");
@@ -129,7 +134,7 @@ int main(int argc, char **argv)
     }
 
     // *** check_archive_test() : BEGIN ***
-    check_archive_test(fd, 21);
+    check_archive_test(fd, 22);
     // *** check_archive_test() : END ***
 
 
@@ -177,8 +182,8 @@ int main(int argc, char **argv)
     char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder1/symlink2"};
     list_test(fd, "folder1/", 3, 3, 3, expected_entries_1);
 
-    char *expected_entries_2[] = {"folder3/file3_1.txt"};
-    list_test(fd, "folder3/", 1, 1, 1, expected_entries_2);
+    char *expected_entries_2[] = {"folder3/file3_1.txt", "folder3/symlink5"};
+    list_test(fd, "folder3/", 2, 2, 2, expected_entries_2);
 
     char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder2/symlink3", "folder2/symlink4"};
     list_test(fd, "folder2/", 4, 4, 4, expected_entries_3);
@@ -204,6 +209,8 @@ int main(int argc, char **argv)
     char *expected_entries_10[] = {""};
     list_test(fd, "folder_empty", 2, 0, 0, expected_entries_10);
 
+    char *expected_entries_11[] = {"folder4/text1.txt", "folder4/text2.txt", "folder4/text3.txt"};
+    list_test(fd, "folder3/symlink5", 3, 3, 3, expected_entries_11);
     // *** list_test() : END ***
 
 
