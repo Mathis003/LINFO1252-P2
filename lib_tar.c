@@ -1,7 +1,14 @@
 #include "lib_tar.h"
 
-const size_t HEADER_SIZE = sizeof(tar_header_t);
-
+/**
+ * Prints information about a tar header for debugging or informational purposes.
+ *
+ * This function outputs details of the specified 'header' with the provided 'id'
+ * to the console, including the entry's name, size, typeflag, magic, version, and checksum.
+ *
+ * @param header The tar header structure to display information for.
+ * @param id The identifier or sequence number for the header (for display purposes).
+ */
 void get_info_header(tar_header_t header, int id)
 {
     printf("header %d\n", id);
@@ -43,7 +50,7 @@ int check_archive(int tar_fd)
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
 
-        get_info_header(header, nber_valid_headers); // Help to Debug
+        // get_info_header(header, nber_valid_headers); // Help to Debug
 
         // Vérifie la valeur "magic"
         if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0) return -1;
@@ -193,7 +200,17 @@ int is_symlink(int tar_fd, char *path)
     return is_x(tar_fd, path, "symlink");
 }
 
-
+/**
+ * Resolves looped symbolic links in a tar archive and returns the final path.
+ *
+ * This function reads the tar archive file descriptor 'tar_fd' to resolve symbolic
+ * links. It starts from the entry with the specified 'header_name' and recursively
+ * follows symbolic links until a non-link entry is detected.
+ *
+ * @param tar_fd The file descriptor of the tar archive.
+ * @param header_name The name of the entry to start resolving symbolic links from.
+ * @return The final path after resolving symbolic links, or NULL if the entry is not found.
+ */
 char *looped_symlinks(int tar_fd, char *header_name)
 {
     tar_header_t header;
@@ -218,6 +235,16 @@ char *looped_symlinks(int tar_fd, char *header_name)
     return NULL;
 }
 
+/**
+ * Skips the directory entries in a tar archive until a different directory is encountered.
+ *
+ * This function reads the tar archive file descriptor 'tar_fd' and advances the
+ * 'header' to the next entry, skipping entries with the same directory name as the
+ * current 'header->name'. It continues until a different directory entry is found.
+ *
+ * @param tar_fd The file descriptor of the tar archive.
+ * @param header A pointer to the current tar header structure.
+ */
 void skip_dir(int tar_fd, tar_header_t *header)
 {
     char *name_dir = (char *) malloc(strlen(header->name) * sizeof(char));
@@ -233,6 +260,29 @@ void skip_dir(int tar_fd, tar_header_t *header)
         if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header->size) / HEADER_SIZE), SEEK_CUR);
     }
     free(name_dir);
+}
+
+/**
+ * Adds a new entry to the list of entries.
+ *
+ * This function appends the specified entry, represented by the 'name_entry' parameter,
+ * to the list of entries. The current count of listed entries is maintained in the
+ * 'listed_entries' parameter.
+ *
+ * @param entries A pointer to the list of entries.
+ * @param name_entry The name of the entry to be added.
+ * @param listed_entries A pointer to the count of listed entries.
+ * @param nber_entries The maximum number of entries that the list can accommodate.
+ *
+ * @return -1 if the list is full and cannot accommodate more entries,
+ *          0 otherwise (entry added successfully).
+ */
+int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nber_entries)
+{
+    memcpy(entries[*listed_entries], name_entry, strlen(name_entry));
+    (*listed_entries)++;
+    if (nber_entries + 1 == *listed_entries) return -1;
+    return 0;
 }
 
 /**
@@ -272,78 +322,79 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         bytes_read = read(tar_fd, &header, HEADER_SIZE);
 
         if (bytes_read != HEADER_SIZE) break;
-        if (header.name[0] == '\0')    break;    
+        if (header.name[0] == '\0')    break;
+
+        printf("--------------- MAIN LOOP ---------------\n");
+        printf("header.name : %s\n\n", header.name);
 
         if (strcmp(header.name, path) == 0)
         {
-            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return list(tar_fd, header.linkname, entries, no_entries);
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)       return list(tar_fd, header.linkname, entries, no_entries);
+            else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
             else if (header.typeflag == DIRTYPE)
             {
                 char *name_dir = (char *) malloc(sizeof(char) * strlen(header.name));
                 memcpy(name_dir, header.name, strlen(header.name));
+                int previous_is_dir = 1;
 
-                bytes_read = read(tar_fd, &header, HEADER_SIZE);
-                if (bytes_read != HEADER_SIZE) break;
-
-                while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
+                while (1)
                 {
-                    if (header.name[0] == '\0') break;
-    
-                    char *name_entry = header.name;
-
-                    if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)
+                    if (previous_is_dir == 0) previous_is_dir = 1;
+                    else
                     {
-                        memcpy(entries[listed_entries], name_entry, strlen(name_entry));
-                        listed_entries++;
-                        if (nber_entries + 1 == listed_entries) break;
-
-                        /*
-                        ...Problème ICI...
-                        */
-
-                        printf("header_name1 : %s\n", header.name);
-                        printf("header_size1 : %ld\n", TAR_INT(header.size));
-
-                        lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
-
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
                         if (bytes_read != HEADER_SIZE) break;
-
-                        printf("header_name2 : %s\n", header.name);
-                        printf("header_size2 : %ld\n\n\n", TAR_INT(header.size));
+                        if (header.name[0] == '\0') break;
                     }
 
-                    else if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
+                    printf("--------------- INNER LOOP ---------------\n");
+                    get_info_header(header, 0);
+                    fflush(stdout);
+
+                    if (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                     {
-                        long cursor_pos = lseek(tar_fd, 0, SEEK_CUR);
-                        name_entry = looped_symlinks(tar_fd, header.linkname);
+                        char *name_entry = header.name;
 
-                        memcpy(entries[listed_entries], name_entry, strlen(name_entry));
-                        listed_entries++;
-                        if (nber_entries + 1 == listed_entries) break;
+                        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)
+                        {
+                            printf("----------- File -----------\n\n\n");
+                            if (list_new_entry(entries, name_entry, &listed_entries, nber_entries) == -1) break;
 
-                        lseek(tar_fd, cursor_pos, SEEK_SET);
+                            /*
+                            Problème : cette ligne skip parfois un symlink (mais elle est indispensable!)
+                            */
+                            lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+                        }
 
-                        bytes_read = read(tar_fd, &header, HEADER_SIZE);
-                        if (bytes_read != HEADER_SIZE) break;
-                    }
-                    
-                    else if (header.typeflag == DIRTYPE)
-                    {
-                        memcpy(entries[listed_entries], name_entry, strlen(name_entry));
-                        listed_entries++;
-                        if (nber_entries + 1 == listed_entries) break;
+                        else if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
+                        {
+                            printf("----------- Symlink -----------\n\n\n");
+                            long cursor_pos = lseek(tar_fd, 0, SEEK_CUR);
+                            name_entry = looped_symlinks(tar_fd, header.linkname);
 
-                        skip_dir(tar_fd, &header);
-                    }
+                            if (list_new_entry(entries, name_entry, &listed_entries, nber_entries) == -1) break;
+                            lseek(tar_fd, cursor_pos, SEEK_SET);
+                        }
+                        
+                        else if (header.typeflag == DIRTYPE)
+                        {
+                            printf("----------- Directory -----------\n\n\n");
+                            if (list_new_entry(entries, name_entry, &listed_entries, nber_entries) == -1) break;
+
+                            skip_dir(tar_fd, &header);
+                            previous_is_dir = 0;
+                        }
+                    } else break;
                 }
 
                 free(name_dir);
                 break;
             }
         }
-
-        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+        else
+        {
+            if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+        }
     }
 
     *no_entries = listed_entries;

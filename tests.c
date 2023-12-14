@@ -5,7 +5,6 @@
 
 #include "lib_tar.h"
 
-
 void debug_dump(const uint8_t *bytes, size_t len)
 {
     for (int i = 0; i < len;)

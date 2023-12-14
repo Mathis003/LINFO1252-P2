@@ -29,6 +29,8 @@ typedef struct posix_header
     char padding[12];             /* 500 */
 } tar_header_t;
 
+#define HEADER_SIZE sizeof(tar_header_t)
+
 #define TMAGIC   "ustar"        /* ustar and a null */
 #define TMAGLEN  6
 #define TVERSION "00"           /* 00 and no null */
@@ -44,7 +46,15 @@ typedef struct posix_header
 /* Converts an ASCII-encoded octal-based number into a regular integer */
 #define TAR_INT(char_ptr) strtol(char_ptr, NULL, 8)
 
-
+/**
+ * Prints information about a tar header for debugging or informational purposes.
+ *
+ * This function outputs details of the specified 'header' with the provided 'id'
+ * to the console, including the entry's name, size, typeflag, magic, version, and checksum.
+ *
+ * @param header The tar header structure to display information for.
+ * @param id The identifier or sequence number for the header (for display purposes).
+ */
 void get_info_header(tar_header_t header, int id);
 
 /**
@@ -108,6 +118,47 @@ int is_file(int tar_fd, char *path);
  */
 int is_symlink(int tar_fd, char *path);
 
+/**
+ * Resolves looped symbolic links in a tar archive and returns the final path.
+ *
+ * This function reads the tar archive file descriptor 'tar_fd' to resolve symbolic
+ * links. It starts from the entry with the specified 'header_name' and recursively
+ * follows symbolic links until a non-link entry is detected.
+ *
+ * @param tar_fd The file descriptor of the tar archive.
+ * @param header_name The name of the entry to start resolving symbolic links from.
+ * @return The final path after resolving symbolic links, or NULL if the entry is not found.
+ */
+char *looped_symlinks(int tar_fd, char *header_name);
+
+/**
+ * Skips the directory entries in a tar archive until a different directory is encountered.
+ *
+ * This function reads the tar archive file descriptor 'tar_fd' and advances the
+ * 'header' to the next entry, skipping entries with the same directory name as the
+ * current 'header->name'. It continues until a different directory entry is found.
+ *
+ * @param tar_fd The file descriptor of the tar archive.
+ * @param header A pointer to the current tar header structure.
+ */
+void skip_dir(int tar_fd, tar_header_t *header);
+
+/**
+ * Adds a new entry to the list of entries.
+ *
+ * This function appends the specified entry, represented by the 'name_entry' parameter,
+ * to the list of entries. The current count of listed entries is maintained in the
+ * 'listed_entries' parameter.
+ *
+ * @param entries A pointer to the list of entries.
+ * @param name_entry The name of the entry to be added.
+ * @param listed_entries A pointer to the count of listed entries.
+ * @param nber_entries The maximum number of entries that the list can accommodate.
+ *
+ * @return -1 if the list is full and cannot accommodate more entries,
+ *          0 otherwise (entry added successfully).
+ */
+int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nber_entries);
 
 /**
  * Lists the entries at a given path in the archive.
