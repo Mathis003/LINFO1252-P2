@@ -128,7 +128,7 @@ int is_symlink(int tar_fd, char *path);
  * @param tar_fd The file descriptor of the tar archive.
  * @param header A pointer to the current tar header structure.
  */
-void skip_dir(int tar_fd, tar_header_t *header);
+void skip_dir(int tar_fd, tar_header_t *header, int *count);
 
 /**
  * Adds a new entry to the list of entries.
