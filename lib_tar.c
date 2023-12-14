@@ -293,11 +293,8 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
             {
-                if (is_dir(tar_fd, header.linkname) != 1)
-                {
-                    strcat(header.linkname, "/");
-                    if (is_dir(tar_fd, header.linkname) != 1) break;
-                }
+                strcat(header.linkname, "/");
+                if (is_dir(tar_fd, header.linkname) != 1) break;
                 return list(tar_fd, header.linkname, entries, no_entries);
             }
             else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
