@@ -201,41 +201,6 @@ int is_symlink(int tar_fd, char *path)
 }
 
 /**
- * Resolves looped symbolic links in a tar archive and returns the final path.
- *
- * This function reads the tar archive file descriptor 'tar_fd' to resolve symbolic
- * links. It starts from the entry with the specified 'header_name' and recursively
- * follows symbolic links until a non-link entry is detected.
- *
- * @param tar_fd The file descriptor of the tar archive.
- * @param header_name The name of the entry to start resolving symbolic links from.
- * @return The final path after resolving symbolic links, or NULL if the entry is not found.
- */
-char *looped_symlinks(int tar_fd, char *header_name)
-{
-    tar_header_t header;
-    ssize_t bytes_read;
-
-    lseek(tar_fd, 0, SEEK_SET);
-
-    while (1)
-    {
-        bytes_read = read(tar_fd, &header, HEADER_SIZE);
-
-        if (bytes_read != HEADER_SIZE) break;
-        if (header.name[0] == '\0')    break;
-
-        if (strcmp(header.name, header_name) == 0)
-        {
-            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return looped_symlinks(tar_fd, header.linkname);
-            return header_name;
-        }
-        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
-    }
-    return NULL;
-}
-
-/**
  * Skips the directory entries in a tar archive until a different directory is encountered.
  *
  * This function reads the tar archive file descriptor 'tar_fd' and advances the
@@ -324,77 +289,51 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
 
-        printf("--------------- MAIN LOOP ---------------\n");
-        printf("header.name : %s\n\n", header.name);
-
         if (strcmp(header.name, path) == 0)
         {
-            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)       return list(tar_fd, header.linkname, entries, no_entries);
+            if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
+            {
+                /*
+                char *entry_name = (char *) malloc((strlen(header.linkname) + 1) * sizeof(char));
+                strcpy(entry_name, header.linkname);
+                strcat(entry_name, "/"); // ?? Rajouter "/" à la fin du linkname [selon l'assistant]
+
+                if (is_dir(tar_fd, entry_name) != 1) break;
+                return list(tar_fd, entry_name, entries, no_entries);
+                */
+
+                if (is_dir(tar_fd, header.linkname) != 1) break;
+                return list(tar_fd, header.linkname, entries, no_entries);
+            }
             else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
             else if (header.typeflag == DIRTYPE)
             {
                 char *name_dir = (char *) malloc(sizeof(char) * strlen(header.name));
                 memcpy(name_dir, header.name, strlen(header.name));
-                int previous_is_dir = 1;
 
-                while (1)
+                bytes_read = read(tar_fd, &header, HEADER_SIZE);
+                if (bytes_read != HEADER_SIZE) break;
+                if (header.name[0] == '\0') break;
+
+                while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
-                    if (previous_is_dir == 0) previous_is_dir = 1;
+                    if (list_new_entry(entries, header.name, &listed_entries, nber_entries) == -1) break;
+                    
+                    if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header);
                     else
                     {
+                        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
                         if (bytes_read != HEADER_SIZE) break;
                         if (header.name[0] == '\0') break;
-                    }
-
-                    printf("--------------- INNER LOOP ---------------\n");
-                    get_info_header(header, 0);
-                    fflush(stdout);
-
-                    if (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
-                    {
-                        char *name_entry = header.name;
-
-                        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)
-                        {
-                            printf("----------- File -----------\n\n\n");
-                            if (list_new_entry(entries, name_entry, &listed_entries, nber_entries) == -1) break;
-
-                            /*
-                            Problème : cette ligne skip parfois un symlink (mais elle est indispensable!)
-                            */
-                            lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
-                        }
-
-                        else if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
-                        {
-                            printf("----------- Symlink -----------\n\n\n");
-                            long cursor_pos = lseek(tar_fd, 0, SEEK_CUR);
-                            name_entry = looped_symlinks(tar_fd, header.linkname);
-
-                            if (list_new_entry(entries, name_entry, &listed_entries, nber_entries) == -1) break;
-                            lseek(tar_fd, cursor_pos, SEEK_SET);
-                        }
-                        
-                        else if (header.typeflag == DIRTYPE)
-                        {
-                            printf("----------- Directory -----------\n\n\n");
-                            if (list_new_entry(entries, name_entry, &listed_entries, nber_entries) == -1) break;
-
-                            skip_dir(tar_fd, &header);
-                            previous_is_dir = 0;
-                        }
-                    } else break;
+                    }      
                 }
 
                 free(name_dir);
                 break;
             }
-        }
-        else
-        {
-            if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
-        }
+        } else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
     }
 
     *no_entries = listed_entries;

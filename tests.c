@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     }
 
     // *** check_archive_test() : BEGIN ***
-    check_archive_test(fd, 20);
+    check_archive_test(fd, 21);
     // *** check_archive_test() : END ***
 
 
@@ -174,13 +174,13 @@ int main(int argc, char **argv)
 
     // *** list_test() : BEGIN ***
     // fd - path - no_entries - expected_ret - expected_no_entries - expected_entries
-    char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder3/file3_1.txt"};
+    char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder1/symlink2"};
     list_test(fd, "folder1/", 3, 3, 3, expected_entries_1);
 
     char *expected_entries_2[] = {"folder3/file3_1.txt"};
     list_test(fd, "folder3/", 1, 1, 1, expected_entries_2);
 
-    char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder3/file3_1.txt", "folder2/subfolder2_2/"};
+    char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder2/symlink3", "folder2/symlink4"};
     list_test(fd, "folder2/", 4, 4, 4, expected_entries_3);
 
     char *expected_entries_4[] = {""};
@@ -200,6 +200,10 @@ int main(int argc, char **argv)
 
     char *expected_entries_9[] = {"folder4/text1.txt", "folder4/text2.txt", "folder4/text3.txt"};
     list_test(fd, "folder4/", 3, 3, 3, expected_entries_9);
+
+    char *expected_entries_10[] = {""};
+    list_test(fd, "folder_empty", 2, 0, 0, expected_entries_10);
+
     // *** list_test() : END ***
 
 

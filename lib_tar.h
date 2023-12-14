@@ -119,19 +119,6 @@ int is_file(int tar_fd, char *path);
 int is_symlink(int tar_fd, char *path);
 
 /**
- * Resolves looped symbolic links in a tar archive and returns the final path.
- *
- * This function reads the tar archive file descriptor 'tar_fd' to resolve symbolic
- * links. It starts from the entry with the specified 'header_name' and recursively
- * follows symbolic links until a non-link entry is detected.
- *
- * @param tar_fd The file descriptor of the tar archive.
- * @param header_name The name of the entry to start resolving symbolic links from.
- * @return The final path after resolving symbolic links, or NULL if the entry is not found.
- */
-char *looped_symlinks(int tar_fd, char *header_name);
-
-/**
  * Skips the directory entries in a tar archive until a different directory is encountered.
  *
  * This function reads the tar archive file descriptor 'tar_fd' and advances the
