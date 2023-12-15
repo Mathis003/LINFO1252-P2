@@ -221,14 +221,13 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count)
 
     while (strncmp(name_dir, header->name, strlen(name_dir)) == 0)
     {
+        if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header->size) / HEADER_SIZE), SEEK_CUR);
         bytes_read = read(tar_fd, header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE)  break;
         if (header->name[0] == '\0')    break;
 
         // printf("header_name %d : %s\n", *count, header->name);
         // (*count)++;
-
-        if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header->size) / HEADER_SIZE), SEEK_CUR);
     }
     free(name_dir);
 
@@ -252,9 +251,9 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count)
  */
 int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nber_entries)
 {
+    if (nber_entries == *listed_entries) return -1;
     memcpy(entries[*listed_entries], name_entry, strlen(name_entry));
     (*listed_entries)++;
-    if (nber_entries == *listed_entries) return -1;
     return 0;
 }
 
@@ -313,8 +312,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
             {
-                char *buffer_linkname = (char *) malloc(sizeof(char) * strlen(header.linkname));
-                strcpy(buffer_linkname, header.linkname);
+                char *buffer_linkname = strdup(header.linkname);
                 strcat(buffer_linkname, "/");
                 if (is_dir(tar_fd, buffer_linkname) != 1)
                 {
@@ -334,31 +332,23 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
                 bytes_read = read(tar_fd, &header, HEADER_SIZE);
                 if (bytes_read != HEADER_SIZE) return end_function(no_entries, listed_entries);
-                if (header.name[0] == '\0')    return end_function(no_entries, listed_entries);
 
                 // printf("header_name %d : %s\n", count, header.name);
                 // count++;
 
-                int previous_dir = 0;
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
+                    if (header.name[0] == '\0')                                                    return end_function(no_entries, listed_entries);
                     if (list_new_entry(entries, header.name, &listed_entries, nber_entries) == -1) return end_function(no_entries, listed_entries);
                     
-                    if (header.typeflag == DIRTYPE)
-                    {
-                        skip_dir(tar_fd, &header, &count);
-                        previous_dir = 1;
-
-                        // get_info_header(header, 0);
-                    }
+                    if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header, &count);
                     else
                     {
-                        if (!(previous_dir) && (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+                        if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
 
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
                         if (bytes_read != HEADER_SIZE) return end_function(no_entries, listed_entries);
-                        if (header.name[0] == '\0')    return end_function(no_entries, listed_entries);
-
+            
                         // printf("header_name %d : %s\n", count, header.name);
                         // count++;
                     }      
