@@ -212,8 +212,6 @@ int is_symlink(int tar_fd, char *path)
  */
 void skip_dir(int tar_fd, tar_header_t *header, int *count)
 {
-    printf("\n======= ======= ======= ======= CALLING : SKIP_DIR() ======= ======= ======= =======\n\n");
-
     char *name_dir = (char *) malloc(strlen(header->name) * sizeof(char));
     memcpy(name_dir, header->name, 1 + strlen(header->name));
 
@@ -221,17 +219,16 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count)
 
     while (strncmp(name_dir, header->name, strlen(name_dir)) == 0)
     {
+        printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
+        (*count)++;
+
         if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header->size) / HEADER_SIZE), SEEK_CUR);
         bytes_read = read(tar_fd, header, HEADER_SIZE);
         if (bytes_read != HEADER_SIZE)  break;
         if (header->name[0] == '\0')    break;
-
-        printf("header_name %d : %s\n", *count, header->name);
-        (*count)++;
     }
     free(name_dir);
-
-    printf("\n======= ======= ======= ======= END : SKIP_DIR() ======= ======= ======= =======\n\n");
+    printf("ENTRY\t\theader_name %d : %s\n", *count, header->name);
 }
 
 /**
@@ -282,13 +279,13 @@ int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nb
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {   
     printf("\n\nTarget : %s\n\n", path);
-
-    size_t nber_entries = *no_entries;
-    if (nber_entries == 0)
+    if (*no_entries <= 0)
     {
         *no_entries = 0;
         return 0;
     }
+
+    size_t nber_entries = *no_entries;
     int listed_entries = 0;
 
     tar_header_t header;
@@ -296,7 +293,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     lseek(tar_fd, 0, SEEK_SET);
 
-    int count = 0;
+    int count = 0; // To Debug only
 
     while (1)
     {
@@ -304,7 +301,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
 
-        printf("header_name %d : %s\n", count, header.name);
+        printf("SEARCHING DIR\theader_name %d : %s\n", count, header.name);
         count++;
 
         if (strcmp(header.name, path) == 0)
@@ -324,7 +321,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 bytes_read = read(tar_fd, &header, HEADER_SIZE);
                 if (bytes_read != HEADER_SIZE) break;
 
-                printf("header_name FIRST %d : %s\n", count, header.name);
+                printf("DIR\t\theader_name %d : %s\n", count, header.name);
                 count++;
 
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
@@ -340,7 +337,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
                         if (bytes_read != HEADER_SIZE) break;
             
-                        printf("header_name %d : %s\n", count, header.name);
+                        printf("ENTRY\t\theader name %d : %s\n", count, header.name);
                         count++;
                     }      
                 }
