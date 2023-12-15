@@ -257,12 +257,6 @@ int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nb
     return 0;
 }
 
-int end_function(size_t *no_entries, int listed_entries)
-{
-    *no_entries = listed_entries;
-    return *no_entries;
-}
-
 /**
  * Lists the entries at a given path in the archive.
  * list() does not recurse into the directories listed at the given path.
@@ -302,8 +296,8 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     while (1)
     {
         bytes_read = read(tar_fd, &header, HEADER_SIZE);
-        if (bytes_read != HEADER_SIZE) return end_function(no_entries, listed_entries);
-        if (header.name[0] == '\0')    return end_function(no_entries, listed_entries);
+        if (bytes_read != HEADER_SIZE) break;
+        if (header.name[0] == '\0')    break;
 
         // printf("header_name %d : %s\n", count, header.name);
         // count++;
@@ -314,32 +308,25 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             {
                 char *buffer_linkname = strdup(header.linkname);
                 strcat(buffer_linkname, "/");
-                if (is_dir(tar_fd, buffer_linkname) != 1)
-                {
-                    int ret = end_function(no_entries, listed_entries);
-                    free(buffer_linkname);
-                    return ret;
-                }
-                int ret = list(tar_fd, buffer_linkname, entries, no_entries);
-                free(buffer_linkname);
-                return ret;
+                if (is_dir(tar_fd, buffer_linkname) != 1) break;
+                return list(tar_fd, buffer_linkname, entries, no_entries);
             }
-            else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) return end_function(no_entries, listed_entries);
+            else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
             else if (header.typeflag == DIRTYPE)
             {
                 char *name_dir = (char *) malloc(sizeof(char) * strlen(header.name));
                 memcpy(name_dir, header.name, strlen(header.name));
 
                 bytes_read = read(tar_fd, &header, HEADER_SIZE);
-                if (bytes_read != HEADER_SIZE) return end_function(no_entries, listed_entries);
+                // if (bytes_read != HEADER_SIZE) break; // Idk if it's usefull
 
                 // printf("header_name %d : %s\n", count, header.name);
                 // count++;
 
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
-                    if (header.name[0] == '\0')                                                    return end_function(no_entries, listed_entries);
-                    if (list_new_entry(entries, header.name, &listed_entries, nber_entries) == -1) return end_function(no_entries, listed_entries);
+                    // if (header.name[0] == '\0')                                                    break;  // Idk if it's usefull
+                    if (list_new_entry(entries, header.name, &listed_entries, nber_entries) == -1) break;
                     
                     if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header, &count);
                     else
@@ -347,7 +334,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
 
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
-                        if (bytes_read != HEADER_SIZE) return end_function(no_entries, listed_entries);
+                        // if (bytes_read != HEADER_SIZE) break; // Idk if it's usefull
             
                         // printf("header_name %d : %s\n", count, header.name);
                         // count++;
@@ -355,12 +342,13 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 }
 
                 free(name_dir);
-                return end_function(no_entries, listed_entries);
+                break;
             }
         } else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
     }
 
-    return end_function(no_entries, listed_entries);
+    *no_entries = listed_entries;
+    return listed_entries;
 }
 
 /**
