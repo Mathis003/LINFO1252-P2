@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     }
 
     // *** check_archive_test() : BEGIN ***
-    check_archive_test(fd, 22);
+    check_archive_test(fd, 23);
     // *** check_archive_test() : END ***
 
 
@@ -246,6 +246,10 @@ int main(int argc, char **argv)
     printf(" \n------------- TEST 16 -------------\n");
     char *expected_entries_16[] = {""};
     list_test(fd, "folder2/symlink4", 2, 0, 0, expected_entries_16);
+
+    printf(" \n------------- TEST 17 -------------\n");
+    char *expected_entries_17[] = {"folder2/subfolder2_2/file2_2_1.txt"};
+    list_test(fd, "symlink_multi", 1, 1, 1, expected_entries_17);
     // *** list_test() : END ***
 
 
