@@ -212,10 +212,10 @@ int is_symlink(int tar_fd, char *path)
  */
 void skip_dir(int tar_fd, tar_header_t *header, int *count)
 {
-    // printf("\n======= ======= ======= ======= CALLING : SKIP_DIR() ======= ======= ======= =======\n\n");
+    printf("\n======= ======= ======= ======= CALLING : SKIP_DIR() ======= ======= ======= =======\n\n");
 
     char *name_dir = (char *) malloc(strlen(header->name) * sizeof(char));
-    memcpy(name_dir, header->name, strlen(header->name));
+    memcpy(name_dir, header->name, 1 + strlen(header->name));
 
     ssize_t bytes_read;
 
@@ -226,12 +226,12 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count)
         if (bytes_read != HEADER_SIZE)  break;
         if (header->name[0] == '\0')    break;
 
-        // printf("header_name %d : %s\n", *count, header->name);
-        // (*count)++;
+        printf("header_name %d : %s\n", *count, header->name);
+        (*count)++;
     }
     free(name_dir);
 
-    // printf("\n======= ======= ======= ======= END : SKIP_DIR() ======= ======= ======= =======\n\n");
+    printf("\n======= ======= ======= ======= END : SKIP_DIR() ======= ======= ======= =======\n\n");
 }
 
 /**
@@ -281,9 +281,14 @@ int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nb
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {   
-    // printf("\n\nTarget : %s\n\n", path);
+    printf("\n\nTarget : %s\n\n", path);
 
     size_t nber_entries = *no_entries;
+    if (nber_entries == 0)
+    {
+        *no_entries = 0;
+        return 0;
+    }
     int listed_entries = 0;
 
     tar_header_t header;
@@ -299,32 +304,32 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
 
-        // printf("header_name %d : %s\n", count, header.name);
-        // count++;
+        printf("header_name %d : %s\n", count, header.name);
+        count++;
 
         if (strcmp(header.name, path) == 0)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
             {
+                if (is_symlink(tar_fd, header.linkname) == 1) return list(tar_fd, header.linkname, entries, no_entries);
                 char *buffer_linkname = strdup(header.linkname);
-                strcat(buffer_linkname, "/");
+                buffer_linkname = strcat(buffer_linkname, "/");
                 return list(tar_fd, buffer_linkname, entries, no_entries);
             }
             else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
             else if (header.typeflag == DIRTYPE)
             {
-                char *name_dir = (char *) malloc(sizeof(char) * strlen(header.name));
-                memcpy(name_dir, header.name, strlen(header.name));
+                char *name_dir = strdup(header.name);
 
                 bytes_read = read(tar_fd, &header, HEADER_SIZE);
-                // if (bytes_read != HEADER_SIZE) break; // Idk if it's usefull
+                if (bytes_read != HEADER_SIZE) break;
 
-                // printf("header_name %d : %s\n", count, header.name);
-                // count++;
+                printf("header_name FIRST %d : %s\n", count, header.name);
+                count++;
 
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
-                    // if (header.name[0] == '\0')                                                    break;  // Idk if it's usefull
+                    if (header.name[0] == '\0')                                                    break;
                     if (list_new_entry(entries, header.name, &listed_entries, nber_entries) == -1) break;
                     
                     if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header, &count);
@@ -333,10 +338,10 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
 
                         bytes_read = read(tar_fd, &header, HEADER_SIZE);
-                        // if (bytes_read != HEADER_SIZE) break; // Idk if it's usefull
+                        if (bytes_read != HEADER_SIZE) break;
             
-                        // printf("header_name %d : %s\n", count, header.name);
-                        // count++;
+                        printf("header_name %d : %s\n", count, header.name);
+                        count++;
                     }      
                 }
 

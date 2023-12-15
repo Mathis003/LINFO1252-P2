@@ -81,27 +81,31 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
     
     if (error == 0)
     {
-        char entries_str[100000] = "[ ";
-        char expected_entries_str[100000] = "[ ";
-        for (int i = 0; i < expected_no_entries - 1; i++)
-        {
-            strcat(expected_entries_str, expected_entries[i]);
-            strcat(expected_entries_str, ", ");
-            strcat(entries_str, entries[i]);
-            strcat(entries_str, ", ");
-        }
-        if (expected_no_entries - 1 >= 0)
-        {
-            strcat(expected_entries_str, expected_entries[expected_no_entries - 1]);
-            strcat(entries_str, entries[expected_no_entries - 1]);
-        }
-        strcat(expected_entries_str, "]");
-        strcat(entries_str, "]");
-        
         printf("ERROR : list() [args : path = %s , no_entries = %ld ]\n", path, copy_no_entries);
         printf("no_entries = %ld AND expected_no_entries = %d\n", no_entries, expected_no_entries);
         printf("ret = %d AND expected_ret = %d\n", ret, expected_ret);
-        printf("entries = %s AND expected_entries = %s\n", entries_str, expected_entries_str);
+
+        if (no_entries > 0)
+        {
+            char entries_str[100000] = "[ ";
+            char expected_entries_str[100000] = "[ ";
+            for (int i = 0; i < expected_no_entries - 1; i++)
+            {
+                strcat(expected_entries_str, expected_entries[i]);
+                strcat(expected_entries_str, ", ");
+                strcat(entries_str, entries[i]);
+                strcat(entries_str, ", ");
+            }
+            if (expected_no_entries - 1 >= 0)
+            {
+                strcat(expected_entries_str, expected_entries[expected_no_entries - 1]);
+                strcat(entries_str, entries[expected_no_entries - 1]);
+            }
+            strcat(expected_entries_str, "]");
+            strcat(entries_str, "]");
+        
+            printf("entries = %s AND expected_entries = %s\n", entries_str, expected_entries_str);
+        }
     }
 
     for (int i = 0; i < no_entries; i++) free(entries[i]);
@@ -181,11 +185,11 @@ int main(int argc, char **argv)
     // fd - path - no_entries - expected_ret - expected_no_entries - expected_entries
     printf(" \n------------- TEST 1 -------------\n");
     char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder1/symlink2"};
-    list_test(fd, "folder1/", 10, 3, 3, expected_entries_1);
+    list_test(fd, "folder1/", 3, 3, 3, expected_entries_1);
 
     printf(" \n------------- TEST 2 -------------\n");
     char *expected_entries_2[] = {"folder3/file3_1.txt", "folder3/symlink5"};
-    list_test(fd, "folder3/", 10, 2, 2, expected_entries_2);
+    list_test(fd, "folder3/", 2, 2, 2, expected_entries_2);
 
     printf(" \n------------- TEST 3 -------------\n");
     char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder2/symlink3", "folder2/symlink4"};
@@ -205,11 +209,11 @@ int main(int argc, char **argv)
 
     printf(" \n------------- TEST 7 -------------\n");
     char *expected_entries_7[] = {""};
-    list_test(fd, "folder1/symlink2", 10, 0, 0, expected_entries_7);
+    list_test(fd, "folder1/symlink2", 3, 0, 0, expected_entries_7);
 
     printf(" \n------------- TEST 8 -------------\n");
     char *expected_entries_8[] = {"folder2/subfolder2_2/file2_2_1.txt"};
-    list_test(fd, "folder2/symlink3", 10, 1, 1, expected_entries_8);
+    list_test(fd, "folder2/symlink3", 1, 1, 1, expected_entries_8);
 
     printf(" \n------------- TEST 9 -------------\n");
     char *expected_entries_9[] = {"folder4/text1.txt", "folder4/text2.txt", "folder4/text3.txt"};
@@ -230,6 +234,18 @@ int main(int argc, char **argv)
     printf(" \n------------- TEST 13 -------------\n");
     char *expected_entries_13[] = {"folder4/text1.txt"};
     list_test(fd, "folder4/", 1, 1, 1, expected_entries_13);
+
+    printf(" \n------------- TEST 14 -------------\n");
+    char *expected_entries_14[] = {""};
+    list_test(fd, "no_file.txt", 1, 0, 0, expected_entries_14);
+
+    printf(" \n------------- TEST 15 -------------\n");
+    char *expected_entries_15[] = {""};
+    list_test(fd, "no_symlink", 1, 0, 0, expected_entries_15);
+
+    printf(" \n------------- TEST 16 -------------\n");
+    char *expected_entries_16[] = {""};
+    list_test(fd, "folder2/symlink4", 2, 0, 0, expected_entries_16);
     // *** list_test() : END ***
 
 
