@@ -313,9 +313,18 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
             {
-                strcat(header.linkname, "/");
-                if (is_dir(tar_fd, header.linkname) != 1) return end_function(no_entries, listed_entries);
-                return list(tar_fd, header.linkname, entries, no_entries);
+                char *buffer_linkname = (char *) malloc(sizeof(char) * strlen(header.linkname));
+                strcpy(buffer_linkname, header.linkname);
+                strcat(buffer_linkname, "/");
+                if (is_dir(tar_fd, buffer_linkname) != 1)
+                {
+                    int ret = end_function(no_entries, listed_entries);
+                    free(buffer_linkname);
+                    return ret;
+                }
+                int ret = list(tar_fd, buffer_linkname, entries, no_entries);
+                free(buffer_linkname);
+                return ret;
             }
             else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) return end_function(no_entries, listed_entries);
             else if (header.typeflag == DIRTYPE)
