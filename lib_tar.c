@@ -219,7 +219,7 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count)
 
     while (strncmp(name_dir, header->name, strlen(name_dir)) == 0)
     {
-        printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
+        // printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
         (*count)++;
 
         if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header->size) / HEADER_SIZE), SEEK_CUR);
@@ -228,7 +228,7 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count)
         if (header->name[0] == '\0')    break;
     }
     free(name_dir);
-    printf("ENTRY\t\theader_name %d : %s\n", *count, header->name);
+    // printf("ENTRY\t\theader_name %d : %s\n", *count, header->name);
 }
 
 /**
@@ -278,7 +278,7 @@ int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nb
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {   
-    printf("\n\nTarget : %s\n\n", path);
+    // printf("\n\nTarget : %s\n\n", path);
 
     if (*no_entries <= 0)
     {
@@ -303,22 +303,40 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         if (bytes_read != HEADER_SIZE) break;
         if (header.name[0] == '\0')    break;
 
-        printf("SEARCHING DIR\theader_name %d : %s\n", count, header.name);
+        // printf("SEARCHING DIR\theader_name %d : %s\n", count, header.name);
         count++;
 
         if (strcmp(header.name, path) == 0)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
             {
-                if (is_symlink(tar_fd, header.linkname) == 1) return list(tar_fd, header.linkname, entries, no_entries);
-                char *buffer_linkname = strdup(header.linkname);
-                buffer_linkname = strcat(buffer_linkname, "/");
-                return list(tar_fd, buffer_linkname, entries, no_entries);
+                // printf("linkname : %s\n", header.linkname);
+                // printf("current name : %s\n", header.name);
+                char *lastSlash = strrchr(header.name, '/');
+                char final_name[100];
+
+                if (lastSlash != NULL)
+                {   
+                    strncpy(final_name, header.name, lastSlash - header.name + 1);
+                    final_name[lastSlash - header.name + 1] = '\0';
+                    strcat(final_name, header.linkname);
+                }
+                else
+                {
+                    strncpy(final_name, header.linkname, sizeof(final_name) - 1);
+                    final_name[sizeof(final_name) - 1] = '\0';
+                }
+                // printf("final_name 1: %s\n", final_name);
+                if (is_symlink(tar_fd, final_name) == 1) return list(tar_fd, final_name, entries, no_entries);
+                strcat(final_name, "/");
+                if (exists(tar_fd, final_name) == 0) break;
+                // printf("final_name 2: %s\n", final_name);
+                return list(tar_fd, final_name, entries, no_entries);
             }
             else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
             else if (header.typeflag == DIRTYPE)
             {
-                printf("DIR FOUNDED\tname : %s\n", header.name);
+                // printf("DIR FOUNDED\tname : %s\n", header.name);
                 char *name_dir = strdup(header.name);
                 status = 1;
 
@@ -327,7 +345,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
-                    printf("ENTRY\t\theader name %d : %s\n", count, header.name);
+                    // printf("ENTRY\t\theader name %d : %s\n", count, header.name);
                     count++;
 
                     if (header.name[0] == '\0')                                                    break;
@@ -351,18 +369,18 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     *no_entries = listed_entries;
 
-    printf("\n=== END OF FUNCTION ===\n\n");
-    printf("no_entries initial value : %ld\n", nber_entries);
-    printf("no_entries final value : %ld\n", *no_entries);
-    printf("list : [ ");
+    // printf("\n=== END OF FUNCTION ===\n\n");
+    // printf("no_entries initial value : %ld\n", nber_entries);
+    // printf("no_entries final value : %ld\n", *no_entries);
+    // printf("list : [ ");
     if (*no_entries != 0)
     {
         for (int i = 0; i < *no_entries - 1; i++)
         {
-            printf(" %s ,", entries[i]);
+            // printf(" %s ,", entries[i]);
         }
-        printf(" %s ]\n", entries[*no_entries - 1]);
-    } else printf(" ]\n");
+        // printf(" %s ]\n", entries[*no_entries - 1]);
+    } // else printf(" ]\n");
 
     if (status == 1 && (*no_entries) == 0) return 1;
     return listed_entries;
