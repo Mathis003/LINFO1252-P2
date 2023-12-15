@@ -308,7 +308,6 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             {
                 char *buffer_linkname = strdup(header.linkname);
                 strcat(buffer_linkname, "/");
-                if (is_dir(tar_fd, buffer_linkname) != 1) break;
                 return list(tar_fd, buffer_linkname, entries, no_entries);
             }
             else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
