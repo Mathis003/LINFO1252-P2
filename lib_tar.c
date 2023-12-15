@@ -279,7 +279,7 @@ int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nb
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {   
     printf("\n\nTarget : %s\n\n", path);
-    
+
     if (*no_entries <= 0)
     {
         *no_entries = 0;
@@ -288,6 +288,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     size_t nber_entries = *no_entries;
     int listed_entries = 0;
+    int status = 0;
 
     tar_header_t header;
     ssize_t bytes_read;
@@ -295,7 +296,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     lseek(tar_fd, 0, SEEK_SET);
 
     int count = 0; // To Debug only
-    int status = 0;
+
     while (1)
     {
         bytes_read = read(tar_fd, &header, HEADER_SIZE);
@@ -317,12 +318,12 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
             else if (header.typeflag == DIRTYPE)
             {
-                status = 1;
                 printf("DIR FOUNDED\tname : %s\n", header.name);
                 char *name_dir = strdup(header.name);
+                status = 1;
 
                 bytes_read = read(tar_fd, &header, HEADER_SIZE);
-                if (bytes_read != HEADER_SIZE) break;
+                if (bytes_read != HEADER_SIZE) {free(name_dir); break;}
 
                 while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
                 {
@@ -347,6 +348,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             }
         } else if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
     }
+
     *no_entries = listed_entries;
 
     printf("\n=== END OF FUNCTION ===\n\n");
@@ -362,7 +364,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         printf(" %s ]\n", entries[*no_entries - 1]);
     } else printf(" ]\n");
 
-    if (status == 1 && *no_entries == 0) return 1;
+    if (status == 1 && (*no_entries) == 0) return 1;
     return listed_entries;
 }
 

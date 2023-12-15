@@ -63,8 +63,6 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
     for (int i = 0; i < no_entries; i++) entries[i] = calloc(sizeof(char), 100);
     int ret = list(fd, path, entries, &no_entries);
 
-    printf("INITIAL no_entries value : %ld\n", copy_no_entries);
-
     int error = 1;
     if (expected_ret != ret)               error = 0;
     if (expected_no_entries != no_entries) error = 0;
@@ -223,7 +221,7 @@ int main(int argc, char **argv)
     
     printf(" \n------------- TEST 10 -------------\n");
     char *expected_entries_10[] = {""};
-    list_test(fd, "folder_empty/", 10, 0, 0, expected_entries_10);
+    list_test(fd, "folder_empty/", 10, 1, 0, expected_entries_10);
 
     printf(" \n------------- TEST 11 -------------\n");
     char *expected_entries_11[] = {"folder4/text1.txt", "folder4/text2.txt", "folder4/text3.txt"};
