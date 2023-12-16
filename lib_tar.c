@@ -298,7 +298,6 @@ void parse_symlink(tar_header_t header, char *final_name)
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {   
     tar_header_t header;
-    size_t max_entries = *no_entries;
     size_t listed_entries = 0;
     int dir_founded = 0;
     int count = 0; // To Debug only
@@ -311,7 +310,6 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
         // printf("SEARCHING DIR\theader_name %d : %s\n", count, header.name);
         // count++;
-
         if (strcmp(header.name, path) != 0) continue;
 
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
@@ -325,7 +323,6 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         else if (header.typeflag == DIRTYPE)
         {
             // printf("DIR FOUNDED\tname : %s\n", header.name);
-
             char *name_dir = strdup(header.name);
             dir_founded = 1;
 
@@ -335,8 +332,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             {
                 // printf("ENTRY\t\theader name %d : %s\n", count, header.name);
                 // count++;
-
-                if (list_new_entry(entries, header.name, &listed_entries, max_entries) == -1) break;
+                if (list_new_entry(entries, header.name, &listed_entries, *no_entries) == -1) break;
                 
                 if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header, &count);
                 else
