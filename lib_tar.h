@@ -145,7 +145,7 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count);
  * @return -1 if the list is full and cannot accommodate more entries,
  *          0 otherwise (entry added successfully).
  */
-int list_new_entry(char **entries, char *name_entry, int *listed_entries, int nber_entries);
+int list_new_entry(char **entries, char *name_entry, size_t *listed_entries, int nber_entries);
 
 /**
  * Lists the entries at a given path in the archive.

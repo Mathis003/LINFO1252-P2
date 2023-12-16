@@ -185,15 +185,15 @@ int main(int argc, char **argv)
     // fd - path - no_entries - expected_ret - expected_no_entries - expected_entries
     printf(" \n------------- TEST 1 -------------\n");
     char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder1/symlink2"};
-    list_test(fd, "folder1/", 3, 3, 3, expected_entries_1);
+    list_test(fd, "folder1/", 3, 1, 3, expected_entries_1);
 
     printf(" \n------------- TEST 2 -------------\n");
     char *expected_entries_2[] = {"folder3/file3_1.txt", "folder3/symlink5"};
-    list_test(fd, "folder3/", 2, 2, 2, expected_entries_2);
+    list_test(fd, "folder3/", 2, 1, 2, expected_entries_2);
 
     printf(" \n------------- TEST 3 -------------\n");
     char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder2/symlink3", "folder2/symlink4", "folder2/symlink_test"};
-    list_test(fd, "folder2/", 10, 5, 5, expected_entries_3);
+    list_test(fd, "folder2/", 10, 1, 5, expected_entries_3);
 
     printf(" \n------------- TEST 4 -------------\n");
     char *expected_entries_4[] = {""};
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 
     printf(" \n------------- TEST 6 -------------\n");
     char *expected_entries_6[] = {"folder1/subfolder1_1/file1_1.txt", "folder1/subfolder1_1/file1_2.txt"};
-    list_test(fd, "symlink1", 10, 2, 2, expected_entries_6);
+    list_test(fd, "symlink1", 10, 1, 2, expected_entries_6);
 
     printf(" \n------------- TEST 7 -------------\n");
     char *expected_entries_7[] = {""};
@@ -217,7 +217,7 @@ int main(int argc, char **argv)
 
     printf(" \n------------- TEST 9 -------------\n");
     char *expected_entries_9[] = {"folder4/text1.txt", "folder4/text2.txt", "folder4/text3.txt"};
-    list_test(fd, "folder4/", 10, 3, 3, expected_entries_9);
+    list_test(fd, "folder4/", 10, 1, 3, expected_entries_9);
     
     printf(" \n------------- TEST 10 -------------\n");
     char *expected_entries_10[] = {""};
@@ -229,7 +229,7 @@ int main(int argc, char **argv)
 
     printf(" \n------------- TEST 12 -------------\n");
     char *expected_entries_12[] = {"folder4/text1.txt", "folder4/text2.txt"};
-    list_test(fd, "folder4/", 2, 2, 2, expected_entries_12);
+    list_test(fd, "folder4/", 2, 1, 2, expected_entries_12);
 
     printf(" \n------------- TEST 13 -------------\n");
     char *expected_entries_13[] = {"folder4/text1.txt"};
