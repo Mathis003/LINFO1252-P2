@@ -59,8 +59,8 @@ int cmper_str(const void *a, const void *b)
 void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expected_no_entries, char *expected_entries[])
 {
     size_t copy_no_entries = no_entries;
-    char *entries[no_entries];
-    for (int i = 0; i < no_entries; i++) entries[i] = calloc(sizeof(char), 100);
+    char **entries = (char **) malloc(no_entries * sizeof(char *));
+    for (int i = 0; i < no_entries; i++) *(entries + i) = (char *) calloc(100, sizeof(char));
     int ret = list(fd, path, entries, &no_entries);
 
     int error = 1;
@@ -106,9 +106,11 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
         
             printf("entries = %s AND expected_entries = %s\n", entries_str, expected_entries_str);
         }
-    }
+    } else printf("Test Passed !\n");
 
-    for (int i = 0; i < no_entries; i++) free(entries[i]);
+    for (int i = 0; i < no_entries; i++) {free(entries[i]); entries[i] = NULL;}
+    free(entries);
+    entries = NULL;
 }
 
 
