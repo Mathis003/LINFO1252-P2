@@ -130,6 +130,8 @@ int is_symlink(int tar_fd, char *path);
  */
 void skip_dir(int tar_fd, tar_header_t *header, int *count);
 
+void parse_symlink(tar_header_t header, char *final_name);
+
 /**
  * Adds a new entry to the list of entries.
  *
