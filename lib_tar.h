@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 typedef struct posix_header
 {                              /* byte offset */
@@ -117,6 +118,8 @@ int is_file(int tar_fd, char *path);
  *         any other value otherwise.
  */
 int is_symlink(int tar_fd, char *path);
+
+bool check_if_entry_folder(char *parent_dir, char *current_path);
 
 /**
  * Skips the directory entries in a tar archive until a different directory is encountered.

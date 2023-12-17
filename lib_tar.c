@@ -1,5 +1,4 @@
 #include "lib_tar.h"
-#include <stdbool.h>
 
 /**
  * Prints information about a tar header for debugging or informational purposes.
@@ -182,6 +181,16 @@ int is_symlink(int tar_fd, char *path)
     return is_x(tar_fd, path, "symlink");
 }
 
+
+bool check_if_entry_folder(char *parent_dir, char *current_path)
+{
+    for (int i = 0; parent_dir[i] != '\0' ; i++)
+    {
+        if (current_path[i] == '\0' || parent_dir[i] != current_path[i]) return false;
+    }
+    return true;
+}
+
 /**
  * Skips the directory entries in a tar archive until a different directory is encountered.
  *
@@ -195,7 +204,7 @@ int is_symlink(int tar_fd, char *path)
 void skip_dir(int tar_fd, tar_header_t *header, int *count)
 {
     char *name_dir = strdup(header->name);
-    while ((strlen(name_dir) <= strlen(header->name)) && strncmp(name_dir, header->name, strlen(name_dir)) == 0)
+    while (check_if_entry_folder(name_dir, header->name) == true)
     {
         // printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
         // (*count)++;
@@ -225,26 +234,26 @@ void skip_dir(int tar_fd, tar_header_t *header, int *count)
 int list_new_entry(char **entries, char *name_entry, size_t *listed_entries, int nber_entries)
 {
     if (nber_entries <= *listed_entries) return -1;
-    memcpy(entries[*listed_entries], name_entry, strlen(name_entry));
+    memcpy(entries[*listed_entries], name_entry, strlen(name_entry) + 1);
     (*listed_entries)++;
     return 0;
 }
 
 void parse_symlink(tar_header_t header, char *final_name)
 {
-    char *lastSlash = strrchr(header.name, '/');
-
-    if (lastSlash != NULL)
-    {   
-        strncpy(final_name, header.name, lastSlash - header.name + 1);
-        final_name[lastSlash - header.name + 1] = '\0';
-        strncat(final_name, header.linkname, strlen(header.linkname));
-    }
-    else
+    int len = strlen(header.name);
+    for (int i = len - 1; i >= 0; i--)
     {
-        strncpy(final_name, header.linkname, strlen(header.linkname));
-        final_name[strlen(header.linkname)] = '\0';
+        if (header.name[i] != '/') len--;
+        else break;
     }
+
+    if (len > 0)
+    {
+        memcpy(final_name, header.name, len);
+        strcat(final_name, header.linkname);
+    }
+    else memcpy(final_name, header.linkname, strlen(header.linkname));
 }
 
 
@@ -290,12 +299,10 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
         else if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)
         {
-            char *final_name = (char *) malloc(500 * sizeof(char));
+            char *final_name = (char *) calloc(100, sizeof(char));
             parse_symlink(header, final_name);
             if (is_symlink(tar_fd, final_name) == 0) strcat(final_name, "/");
-            int result = list(tar_fd, final_name, entries, no_entries);
-            free(final_name);
-            return result;
+            return list(tar_fd, final_name, entries, no_entries);
         }
         else if (header.typeflag == DIRTYPE)
         {
@@ -305,8 +312,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
             if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') {free(name_dir); break;}
 
-            // Si je met strlen(header.name) au lieu de strlen(name_dir), 3eme test passe mais plus le 2eme...
-            while ((strlen(name_dir) <= strlen(header.name)) && strncmp(header.name, name_dir, strlen(name_dir)) == 0)
+            while (check_if_entry_folder(name_dir, header.name) == true)
             {
                 // printf("ENTRY\t\theader name %d : %s\n", count, header.name);
                 // count++;
