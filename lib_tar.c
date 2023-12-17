@@ -195,7 +195,7 @@ int is_symlink(int tar_fd, char *path)
 void skip_dir(int tar_fd, tar_header_t *header, int *count)
 {
     char *name_dir = strdup(header->name);
-    while (strncmp(name_dir, header->name, strlen(name_dir)) == 0)
+    while ((strlen(name_dir) <= strlen(header->name)) && strncmp(name_dir, header->name, strlen(name_dir)) == 0)
     {
         // printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
         // (*count)++;
@@ -305,7 +305,8 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
             if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') {free(name_dir); break;}
 
-            while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
+            // Si je met strlen(header.name) au lieu de strlen(name_dir), 3eme test passe mais plus le 2eme...
+            while ((strlen(name_dir) <= strlen(header.name)) && strncmp(header.name, name_dir, strlen(name_dir)) == 0)
             {
                 // printf("ENTRY\t\theader name %d : %s\n", count, header.name);
                 // count++;
@@ -372,6 +373,8 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
                 long used_len = (total_len > dest_len) ? dest_len : total_len;
                 if (read(tar_fd, dest, used_len) <= 0) break;
 
+                // Problem detected !!
+                // *len = strlen((char *) dest);
                 *len = used_len;
                 return total_len - used_len;
             }
