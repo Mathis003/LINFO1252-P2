@@ -203,7 +203,8 @@ bool check_if_entry_folder(char *parent_dir, char *current_path)
  */
 void skip_dir(int tar_fd, tar_header_t *header, int *count)
 {
-    char *name_dir = strdup(header->name);
+    char *name_dir = (char *) calloc(100, sizeof(char));
+    memcpy(name_dir, header->name, strlen(header->name));
     while (check_if_entry_folder(name_dir, header->name) == true)
     {
         // printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
@@ -302,12 +303,16 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             char *final_name = (char *) calloc(100, sizeof(char));
             parse_symlink(header, final_name);
             if (is_symlink(tar_fd, final_name) == 0) strcat(final_name, "/");
-            return list(tar_fd, final_name, entries, no_entries);
+            int result =  list(tar_fd, final_name, entries, no_entries);
+            free(final_name);
+            return result;
         }
         else if (header.typeflag == DIRTYPE)
         {
             // printf("DIR FOUNDED\tname : %s\n", header.name);
-            char *name_dir = strdup(header.name);
+            char *name_dir = (char *) calloc(100, sizeof(char));
+            memcpy(name_dir, header.name, strlen(header.name));
+
             dir_founded = 1;
 
             if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') {free(name_dir); break;}
