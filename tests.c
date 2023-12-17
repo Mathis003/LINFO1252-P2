@@ -21,12 +21,14 @@ void check_archive_test(int fd, int expected)
 {
     int ret = check_archive(fd);
     if (expected != ret) printf("ERROR : check_archive()\nReturn %d instead of %d\n", ret, expected);
+    else printf("\tTest Passed !\n");
 }
 
 void exists_test(int fd, char *path, int expected)
 {
     int ret = exists(fd, path);
     if (expected != ret) printf("ERROR : exists()\nReturn %d instead of %d\n[args : path = %s ]\n", ret, expected, path);
+    else printf("\tTest Passed !\n");
 }
 
 void is_x_test(int fd, char *path, char *type, int expected)
@@ -48,7 +50,9 @@ void is_x_test(int fd, char *path, char *type, int expected)
         ret = is_dir(fd, path);
         function_name = "is_dir";
     }
+
     if (expected != ret) printf("ERROR : %s()\nReturn %d instead of %d\n[args : path = %s ]\n", function_name, ret, expected, path);
+    else printf("\tTest Passed !\n");
 }
 
 int cmper_str(const void *a, const void *b)
@@ -60,7 +64,7 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
 {
     size_t copy_no_entries = no_entries;
     char **entries = (char **) malloc(no_entries * sizeof(char *));
-    for (int i = 0; i < no_entries; i++) *(entries + i) = (char *) calloc(100, sizeof(char));
+    for (int i = 0; i < no_entries; i++) *(entries + i) = (char *) calloc(200, sizeof(char));
     int ret = list(fd, path, entries, &no_entries);
 
     int error = 1;
@@ -106,7 +110,7 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
         
             printf("entries = %s AND expected_entries = %s\n", entries_str, expected_entries_str);
         }
-    } else printf("Test Passed !\n");
+    } else printf("\tTest Passed !\n");
 
     for (int i = 0; i < no_entries; i++) {free(entries[i]); entries[i] = NULL;}
     free(entries);
@@ -118,9 +122,12 @@ void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_
 {
     uint8_t *buffer = calloc(sizeof(char), len);
     int ret = read_file(fd, path, offset, buffer, &len);
-    if (expected_ret != ret) printf("ERROR : read_file()\nReturn %d instead of %d\n[args : path = %s ]\n", ret, expected_ret, path);
-    if (expected_len != len) printf("ERROR : read_file()\nlen = %ld instead of len = %d\n[args : path = %s ]\n", len, expected_len, path);
-    if (strcmp(expected_buffer, (char *) buffer) != 0) printf("ERROR : read_file()\nbuffer = %s instead of buffer = %s\n[args : path = %s ]\n", buffer, expected_buffer, path);
+    int no_error = 1;
+    if (expected_ret != ret) {no_error = 0; printf("ERROR : read_file()\nReturn %d instead of %d\n[args : path = %s ]\n", ret, expected_ret, path);}
+    if (expected_len != len) {no_error = 0; printf("ERROR : read_file()\nlen = %ld instead of len = %d\n[args : path = %s ]\n", len, expected_len, path);}
+    if (strcmp(expected_buffer, (char *) buffer) != 0) {no_error = 0; printf("ERROR : read_file()\nbuffer = %s instead of buffer = %s\n[args : path = %s ]\n", buffer, expected_buffer, path);}
+
+    if (no_error == 1) printf("\tTest Passed !\n");
     free(buffer);
 }
 
@@ -140,11 +147,13 @@ int main(int argc, char **argv)
     }
 
     // *** check_archive_test() : BEGIN ***
+    printf("Test check_archive() :\n");
     check_archive_test(fd, 24);
     // *** check_archive_test() : END ***
 
 
     // *** exists_test() : BEGIN ***
+    printf("\nTest exists_test() :\n");
     exists_test(fd, "folder1/file1.txt", 1);
     exists_test(fd, "folder1/subfolder1_1/file1_2.txt", 1);
     exists_test(fd, "folder3/", 1);
@@ -160,6 +169,7 @@ int main(int argc, char **argv)
 
 
     // *** is_x_test() : BEGIN ***
+    printf("\nTest is_x() :\n");
     is_x_test(fd, "folder1/subfolder1_1/file1_2.txt", "file", 1);
     is_x_test(fd, "folder1/file1.txt", "file", 1);
     is_x_test(fd, "folder3/file3_1.txt", "file", 1);
@@ -185,75 +195,58 @@ int main(int argc, char **argv)
 
     // *** list_test() : BEGIN ***
     // fd - path - no_entries - expected_ret - expected_no_entries - expected_entries
-    printf(" \n------------- TEST 1 -------------\n");
+    printf("\nTest list() :\n");
     char *expected_entries_1[] = {"folder1/subfolder1_1/", "folder1/file1.txt", "folder1/symlink2"};
     list_test(fd, "folder1/", 3, 1, 3, expected_entries_1);
 
-    printf(" \n------------- TEST 2 -------------\n");
     char *expected_entries_2[] = {"folder3/file3_1.txt", "folder3/symlink5"};
     list_test(fd, "folder3/", 2, 1, 2, expected_entries_2);
 
-    printf(" \n------------- TEST 3 -------------\n");
     char *expected_entries_3[] = {"folder2/subfolder2_1/", "folder2/subfolder2_2/", "folder2/symlink3", "folder2/symlink4", "folder2/symlink_test"};
     list_test(fd, "folder2/", 10, 1, 5, expected_entries_3);
 
-    printf(" \n------------- TEST 4 -------------\n");
     char *expected_entries_4[] = {""};
     list_test(fd, "doesnt_exist/", 10, 0, 0, expected_entries_4);
 
-    printf(" \n------------- TEST 5 -------------\n");
     char *expected_entries_5[] = {""};
     list_test(fd, "folder3/file3_1.txt", 10, 0, 0, expected_entries_5);
 
-    printf(" \n------------- TEST 6 -------------\n");
     char *expected_entries_6[] = {"folder1/subfolder1_1/file1_1.txt", "folder1/subfolder1_1/file1_2.txt"};
     list_test(fd, "symlink1", 10, 1, 2, expected_entries_6);
 
-    printf(" \n------------- TEST 7 -------------\n");
     char *expected_entries_7[] = {""};
     list_test(fd, "folder1/symlink2", 3, 0, 0, expected_entries_7);
 
-    printf(" \n------------- TEST 8 -------------\n");
     char *expected_entries_8[] = {""};
     list_test(fd, "folder2/symlink3", 1, 0, 0, expected_entries_8);
 
-    printf(" \n------------- TEST 9 -------------\n");
     char *expected_entries_9[] = {"folder4/text1.txt", "folder4/text2.txt", "folder4/text3.txt"};
     list_test(fd, "folder4/", 10, 1, 3, expected_entries_9);
     
-    printf(" \n------------- TEST 10 -------------\n");
     char *expected_entries_10[] = {""};
     list_test(fd, "folder_empty/", 10, 1, 0, expected_entries_10);
 
-    printf(" \n------------- TEST 11 -------------\n");
     char *expected_entries_11[] = {""};
     list_test(fd, "folder3/symlink5", 10, 0, 0, expected_entries_11);
 
-    printf(" \n------------- TEST 12 -------------\n");
     char *expected_entries_12[] = {"folder4/text1.txt", "folder4/text2.txt"};
     list_test(fd, "folder4/", 2, 1, 2, expected_entries_12);
 
-    printf(" \n------------- TEST 13 -------------\n");
     char *expected_entries_13[] = {"folder4/text1.txt"};
     list_test(fd, "folder4/", 1, 1, 1, expected_entries_13);
 
-    printf(" \n------------- TEST 14 -------------\n");
     char *expected_entries_14[] = {""};
     list_test(fd, "no_file.txt", 1, 0, 0, expected_entries_14);
 
-    printf(" \n------------- TEST 15 -------------\n");
     char *expected_entries_15[] = {""};
     list_test(fd, "no_symlink", 1, 0, 0, expected_entries_15);
 
-    printf(" \n------------- TEST 16 -------------\n");
     char *expected_entries_16[] = {""};
     list_test(fd, "folder2/symlink4", 2, 0, 0, expected_entries_16);
 
-    printf(" \n------------- TEST 17 -------------\n");
     char *expected_entries_17[] = {"folder2/subfolder2_1/file2_2_1.txt"};
     list_test(fd, "symlink_multi", 1, 1, 1, expected_entries_17);
 
-     printf(" \n------------- TEST 18 -------------\n");
     char *expected_entries_18[] = {"folder2/subfolder2_1/file2_2_1.txt"};
     list_test(fd, "folder2/symlink_test", 1, 1, 1, expected_entries_18);
     // *** list_test() : END ***
@@ -261,6 +254,7 @@ int main(int argc, char **argv)
 
     // *** read_file_test() : BEGIN ***
     // fd - path - offset - len - expected_ret - expected_len - expected_buffer
+    printf("\nTest read_file() :\n");
     read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 0, 1000, 0, 342, "My fellow citizens, let us embrace the dawn of a new era.\nIn the symphony of democracy, every note contributes to the melody of progress.\nWe must be the architects of our shared destiny, champions of justice, and stewards of liberty.\nTogether, we navigate the uncharted waters of the future, anchored by the values that define us as a people.");
     read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 0, 342, 0, 342, "My fellow citizens, let us embrace the dawn of a new era.\nIn the symphony of democracy, every note contributes to the melody of progress.\nWe must be the architects of our shared destiny, champions of justice, and stewards of liberty.\nTogether, we navigate the uncharted waters of the future, anchored by the values that define us as a people.");
     read_file_test(fd, "folder1/subfolder1_1/file1_2.txt", 0, 76, 266, 76, "My fellow citizens, let us embrace the dawn of a new era.\nIn the symphony of");

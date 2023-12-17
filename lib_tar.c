@@ -39,24 +39,18 @@ void get_info_header(tar_header_t header, int id)
 int check_archive(int tar_fd)
 {
     tar_header_t header;
-    ssize_t bytes_read;
     int nber_valid_headers = 0;
 
     lseek(tar_fd, 0, SEEK_SET);
 
     while (1)
     { 
-        bytes_read = read(tar_fd, &header, HEADER_SIZE);
-
-        if (bytes_read != HEADER_SIZE) break;
-        if (header.name[0] == '\0')    break;
+        if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') break;
 
         // get_info_header(header, nber_valid_headers); // Help to Debug
 
-        // Vérifie la valeur "magic"
-        if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0) return -1;
-
-        // Vérifie la valeur "version"
+        // Vérifie la valeur "magic" et "version"
+        if (strncmp(header.magic, TMAGIC, TMAGLEN) != 0)      return -1;
         if (strncmp(header.version, TVERSION, TVERSLEN) != 0) return -2;
 
         // Calcule le checksum
@@ -91,20 +85,13 @@ int check_archive(int tar_fd)
 int exists(int tar_fd, char *path)
 {
     tar_header_t header;
-    ssize_t bytes_read;
 
     lseek(tar_fd, 0, SEEK_SET);
 
     while (1)
     {
-        bytes_read = read(tar_fd, &header, HEADER_SIZE);
-
-        if (bytes_read != HEADER_SIZE) break;
-        if (header.name[0] == '\0')    break;
-
-        // Vérifie si l'entrée existe
+        if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') break;
         if (strcmp(header.name, path) == 0) return 1;
-
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
     }
 
@@ -124,21 +111,15 @@ int exists(int tar_fd, char *path)
 int is_x(int tar_fd, char *path, char *type_file)
 {
     tar_header_t header;
-    ssize_t bytes_read;
 
     lseek(tar_fd, 0, SEEK_SET);
 
     while (1)
     {
-        bytes_read = read(tar_fd, &header, HEADER_SIZE);
-
-        if (bytes_read != HEADER_SIZE) break;
-        if (header.name[0] == '\0')    break;
+        if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') break;
         
-        // Vérifie si l'entrée existe
         if (strcmp(header.name, path) == 0)
         {
-            // Vérifie si l'entrée matche avec le type spécifié
             if (strcmp(type_file, "dir") == 0)
             {
                 if (header.typeflag == DIRTYPE)                                 return 1;
@@ -213,20 +194,14 @@ int is_symlink(int tar_fd, char *path)
  */
 void skip_dir(int tar_fd, tar_header_t *header, int *count)
 {
-    char *name_dir = (char *) malloc(strlen(header->name) * sizeof(char));
-    memcpy(name_dir, header->name, 1 + strlen(header->name));
-
-    ssize_t bytes_read;
-
+    char *name_dir = strdup(header->name);
     while (strncmp(name_dir, header->name, strlen(name_dir)) == 0)
     {
         // printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
         // (*count)++;
 
         if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header->size) / HEADER_SIZE), SEEK_CUR);
-        bytes_read = read(tar_fd, header, HEADER_SIZE);
-        if (bytes_read != HEADER_SIZE)  break;
-        if (header->name[0] == '\0')    break;
+        if (read(tar_fd, header, HEADER_SIZE) <= 0 || header->name[0] == '\0') break;
     }
     free(name_dir);
     // printf("ENTRY\t\theader_name %d : %s\n", *count, header->name);
@@ -263,7 +238,7 @@ void parse_symlink(tar_header_t header, char *final_name)
     {   
         strncpy(final_name, header.name, lastSlash - header.name + 1);
         final_name[lastSlash - header.name + 1] = '\0';
-        strcat(final_name, header.linkname);
+        strncat(final_name, header.linkname, strlen(header.linkname));
     }
     else
     {
@@ -318,7 +293,9 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             char *final_name = (char *) malloc(500 * sizeof(char));
             parse_symlink(header, final_name);
             if (is_symlink(tar_fd, final_name) == 0) strcat(final_name, "/");
-            return list(tar_fd, final_name, entries, no_entries);
+            int result = list(tar_fd, final_name, entries, no_entries);
+            free(final_name);
+            return result;
         }
         else if (header.typeflag == DIRTYPE)
         {
@@ -326,7 +303,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             char *name_dir = strdup(header.name);
             dir_founded = 1;
 
-            if (read(tar_fd, &header, HEADER_SIZE) <= 0 && header.name[0] != '\0') {free(name_dir); break;}
+            if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') {free(name_dir); break;}
 
             while (strncmp(header.name, name_dir, strlen(name_dir)) == 0)
             {
@@ -337,8 +314,8 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header, &count);
                 else
                 {
-                    if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)         lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
-                    if (read(tar_fd, &header, HEADER_SIZE) <= 0 && header.name[0] != '\0') break;
+                    if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) lseek(tar_fd, HEADER_SIZE * (1 + TAR_INT(header.size) / HEADER_SIZE), SEEK_CUR);
+                    if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') break;
                 }
             }
             free(name_dir);
@@ -372,45 +349,31 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
 {
-    size_t dest_len = *len;
-    if ((int) offset < 0)
-    {
-        *len = 0;
-        return -2;
-    }
-
     tar_header_t header;
-    ssize_t bytes_read;
+    size_t dest_len = *len;
+    if ((int) offset < 0) { *len = 0; return -2; }
 
     lseek(tar_fd, 0, SEEK_SET);
 
     while (1)
     {
-        bytes_read = read(tar_fd, &header, HEADER_SIZE);
+        if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') break;
 
-        if (bytes_read != HEADER_SIZE) break;
-        if (header.name[0] == '\0')    break;
-        
         if (strcmp(header.name, path) == 0)
         {
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return read_file(tar_fd, header.linkname, offset, dest, len);
             if (header.typeflag == AREGTYPE || header.typeflag == REGTYPE)
             {
-                long long nber_bytes_to_read = TAR_INT(header.size) - offset;
-                if (nber_bytes_to_read <= 0)
-                {
-                    *len = 0;
-                    return -2;
-                }
+                long total_len = TAR_INT(header.size) - offset;
+                if (total_len <= 0) { *len = 0; return -2; }
 
                 lseek(tar_fd, offset, SEEK_CUR);
 
-                long int min_length = (nber_bytes_to_read > dest_len) ? dest_len : nber_bytes_to_read;
-                ssize_t nber_bytes_read = read(tar_fd, dest, min_length);
-                if (nber_bytes_read != min_length) break;
+                long used_len = (total_len > dest_len) ? dest_len : total_len;
+                if (read(tar_fd, dest, used_len) <= 0) break;
 
-                *len = min_length;
-                return (min_length == nber_bytes_to_read) ? 0 : (nber_bytes_to_read - dest_len);
+                *len = used_len;
+                return total_len - used_len;
             }
         }
         
