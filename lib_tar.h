@@ -133,7 +133,7 @@ bool check_if_entry_folder(char *parent_dir, char *current_path);
  */
 void skip_dir(int tar_fd, tar_header_t *header, int *count);
 
-void parse_symlink(tar_header_t header, char *final_name);
+char *parse_symlink(char *const header_name, char *const header_linkname);
 
 /**
  * Adds a new entry to the list of entries.
