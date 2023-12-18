@@ -58,6 +58,8 @@ typedef struct posix_header
  */
 void get_info_header(tar_header_t header, int id);
 
+void skip_file_content(int tar_fd, tar_header_t header);
+
 /**
  * Checks whether the archive is valid.
  *
