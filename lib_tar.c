@@ -213,24 +213,16 @@ bool check_if_entry_folder(char *parent_dir, char *current_path)
  * @param tar_fd The file descriptor of the tar archive.
  * @param header A pointer to the current tar header structure.
  */
-void skip_dir(int tar_fd, tar_header_t *header, int *count)
+void skip_dir(int tar_fd, tar_header_t *header)
 {
-    char *name_dir = (char *) calloc(100, sizeof(char));
+    char *name_dir = (char *) malloc(100 * sizeof(char));
     memcpy(name_dir, header->name, 100 * sizeof(char));
     while (check_if_entry_folder(name_dir, header->name) == true)
     {
-        // printf("SKIPPING SUBDIR\theader_name %d : %s\n", *count, header->name);
-        // (*count)++;
-
-        if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE)
-        {
-            if (TAR_INT(header->size) % HEADER_SIZE != 0) lseek(tar_fd, HEADER_SIZE * (TAR_INT(header->size) / HEADER_SIZE), SEEK_CUR);
-            lseek(tar_fd, HEADER_SIZE, SEEK_CUR);
-        }
+        if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) skip_file_content(tar_fd, *header);
         if (read(tar_fd, header, HEADER_SIZE) <= 0 || header->name[0] == '\0') break;
     }
     free(name_dir);
-    // printf("ENTRY\t\theader_name %d : %s\n", *count, header->name);
 }
 
 /**
@@ -258,7 +250,7 @@ int list_new_entry(char **entries, char *name_entry, size_t *listed_entries, int
 
 char *parse_symlink(char *const header_name, char *const header_linkname)
 {
-    char *parsed_name = (char *) calloc(100, sizeof(char));
+    char *parsed_name = (char *) malloc(100 * sizeof(char));
     int len = strlen(header_name) - 1;
     for (int i = len; i >= 0; i--)
     {
@@ -266,6 +258,9 @@ char *parse_symlink(char *const header_name, char *const header_linkname)
         else break;
     }
 
+    int len_linkname = strlen(header_linkname);
+    if (len_linkname + len + 1 >= 100) return parsed_name;
+    
     if (len > 0)
     {
         memcpy(parsed_name, header_name, len + 1);
@@ -300,11 +295,10 @@ char *parse_symlink(char *const header_name, char *const header_linkname)
  *         any other value otherwise.
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
-{   
+{
     tar_header_t header;
     size_t listed_entries = 0;
     int dir_founded = 0;
-    int count = 0; // To Debug only
 
     lseek(tar_fd, 0, SEEK_SET);
 
@@ -312,8 +306,6 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     {
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) skip_file_content(tar_fd, header);
 
-        // printf("SEARCHING DIR\theader_name %d : %s\n", count, header.name);
-        // count++;
         if (strcmp(header.name, path) != 0) continue;
 
         if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE) break;
@@ -327,21 +319,18 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         }
         else if (header.typeflag == DIRTYPE)
         {
-            // printf("DIR FOUNDED\tname : %s\n", header.name);
-            char *name_dir = (char *) calloc(100, sizeof(char));
-            memcpy(name_dir, header.name, 100 * sizeof(char));
-
             dir_founded = 1;
+
+            char *name_dir = (char *) malloc(100 * sizeof(char));
+            memcpy(name_dir, header.name, 100 * sizeof(char));
 
             if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') {free(name_dir); break;}
 
             while (check_if_entry_folder(name_dir, header.name) == true)
             {
-                // printf("ENTRY\t\theader name %d : %s\n", count, header.name);
-                // count++;
                 if (list_new_entry(entries, header.name, &listed_entries, *no_entries) == -1) break;
                 
-                if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header, &count);
+                if (header.typeflag == DIRTYPE) skip_dir(tar_fd, &header);
                 else
                 {
                     if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)         skip_file_content(tar_fd, header);
@@ -354,7 +343,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     }
 
     *no_entries = listed_entries;
-    if (dir_founded == 1 && (*no_entries) == 0) return 1;
+    if (dir_founded == 1 && listed_entries == 0) return 1;
     return (listed_entries > 0) ? 1 : 0;
 }
 

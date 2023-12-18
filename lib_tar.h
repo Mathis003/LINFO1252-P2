@@ -133,7 +133,7 @@ bool check_if_entry_folder(char *parent_dir, char *current_path);
  * @param tar_fd The file descriptor of the tar archive.
  * @param header A pointer to the current tar header structure.
  */
-void skip_dir(int tar_fd, tar_header_t *header, int *count);
+void skip_dir(int tar_fd, tar_header_t *header);
 
 char *parse_symlink(char *const header_name, char *const header_linkname);
 
