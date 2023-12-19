@@ -58,7 +58,7 @@ void skip_dir(int tar_fd, tar_header_t *header)
     char *name_dir = (char *) malloc(100 * sizeof(char));
     memcpy(name_dir, header->name, 100 * sizeof(char));
 
-    while (check_if_entry_folder(name_dir, header->name) == true)
+    while (check_if_entry_folder(name_dir, header->name) == 1)
     {
         if (header->typeflag == REGTYPE || header->typeflag == AREGTYPE) skip_file_content(tar_fd, *header);
         if (read(tar_fd, header, HEADER_SIZE) <= 0 || header->name[0] == '\0') break;
@@ -67,34 +67,59 @@ void skip_dir(int tar_fd, tar_header_t *header)
     free(name_dir);
 }
 
-bool check_if_entry_folder(char *parent_dir, char *current_path)
+/**
+ * Checks if the current path belongs to the same directory as the parent directory.
+ *
+ * This function compares the 'parent_dir' and 'current_path' character strings to determine
+ * whether they represent entries in the same directory. It returns 1 if 'current_path' is
+ * a subdirectory or a file within 'parent_dir', and 0 otherwise.
+ *
+ * @param parent_dir A null-terminated character string representing the parent directory.
+ * @param current_path A null-terminated character string representing the current directory path.
+ * @return Returns 1 if 'current_path' is within or equal to 'parent_dir', and 0 otherwise.
+ */
+int check_if_entry_folder(char *parent_dir, char *current_path)
 {
     for (int i = 0; parent_dir[i] != '\0' ; i++)
     {
-        if (current_path[i] == '\0' || parent_dir[i] != current_path[i]) return false;
+        if (current_path[i] == '\0' || parent_dir[i] != current_path[i]) return 0;
     }
-    return true;
+    return 1;
 }
 
-
-char *parse_symlink(char *const header_name, char *const header_linkname)
+/**
+ * Parses the symlink path based on the header information.
+ *
+ * This function constructs the parsed symlink path by combining the base directory
+ * from the 'header_name' and the relative symlink path from 'header_linkname'. The
+ * resulting parsed symlink path is returned as a dynamically allocated string.
+ *
+ * @param header_name A null-terminated character string representing the base directory.
+ * @param header_linkname A null-terminated character string representing the symlink path.
+ * @return Returns the parsed symlink path as a dynamically allocated string.
+ *         If the allocation fails or the resulting path exceeds 100 characters, an
+ *         empty string is returned.
+ */
+char *parse_symlink(char *header_name, char *header_linkname)
 {
     char *parsed_name = (char *) malloc(100 * sizeof(char));
     int len = strlen(header_name) - 1;
+    // Get the len of the last '/'
     for (int i = len; i >= 0; i--)
     {
         if (header_name[i] != '/') len--;
         else break;
     }
 
-    int len_linkname = strlen(header_linkname);
-    if (len_linkname + len + 1 >= 100) return parsed_name;
+    // Size max of a name : 100 characters
+    if (strlen(header_linkname) + len + 1 >= 100) return parsed_name;
     
     if (len > 0)
     {
         memcpy(parsed_name, header_name, len + 1);
         strcat(parsed_name, header_linkname);
     }
+    // No backslash in header_name
     else memcpy(parsed_name, header_linkname, 100 * sizeof(char));
 
     return parsed_name;
@@ -318,7 +343,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
             if (read(tar_fd, &header, HEADER_SIZE) <= 0 || header.name[0] == '\0') {free(name_dir); break;}
 
-            while (check_if_entry_folder(name_dir, header.name) == true)
+            while (check_if_entry_folder(name_dir, header.name) == 1)
             {
                 if (*no_entries <= listed_entries) break;
                 memcpy(entries[listed_entries], header.name, 100 * sizeof(char));
