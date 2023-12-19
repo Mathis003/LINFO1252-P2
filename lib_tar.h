@@ -117,6 +117,18 @@ int check_if_entry_folder(char *parent_dir, char *current_path);
  */
 char *parse_symlink(char *header_name, char *header_linkname);
 
+/**
+ * Checks whether an entry in the archive matches the specified type.
+ *
+ * @param tar_fd A file descriptor pointing to the start of a valid tar archive file.
+ * @param path A path to an entry in the archive.
+ * @param type_file String(s) specifying the expected type(s) of the entry ([DIRTYPE], [REGTYPE, AREGTYPE], [SYMTYPE, LNKTYPE]).
+ *
+ * @return 1 if the entry at the given path exists in the archive and matches the specified type,
+ *         0 otherwise. If the specified type is not recognized, the function returns -1.
+ */
+int is_x(int tar_fd, char *path, char *type_file);
+
 /*
 Helpful functions : END
 */

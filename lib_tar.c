@@ -125,6 +125,48 @@ char *parse_symlink(char *header_name, char *header_linkname)
     return parsed_name;
 }
 
+/**
+ * Checks whether an entry in the archive matches the specified type.
+ *
+ * @param tar_fd A file descriptor pointing to the start of a valid tar archive file.
+ * @param path A path to an entry in the archive.
+ * @param type_file String(s) specifying the expected type(s) of the entry ([DIRTYPE], [REGTYPE, AREGTYPE], [SYMTYPE, LNKTYPE]).
+ *
+ * @return 1 if the entry at the given path exists in the archive and matches the specified type,
+ *         0 otherwise. If the specified type is not recognized, the function returns -1.
+ */
+int is_x(int tar_fd, char *path, char *type_file)
+{
+    tar_header_t header;
+    int ret = 0;
+
+    lseek(tar_fd, 0, SEEK_SET);
+
+    while (read(tar_fd, &header, HEADER_SIZE) > 0 && header.name[0] != '\0')
+    {   
+        if (strcmp(header.name, path) == 0)
+        {
+            if (strcmp(type_file, "dir") == 0)
+            {
+                if (header.typeflag == DIRTYPE)                                 {ret = 1; break;}
+            }
+            else if (strcmp(type_file, "file") == 0)
+            {
+                if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)  {ret = 1; break;}
+            }
+            else if (strcmp(type_file, "symlink") == 0)
+            {
+                if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)   {ret = 1; break;}
+            }
+            else                                                                {ret = -1; break;}
+        }
+        skip_file_content(tar_fd, header);
+    }
+
+    lseek(tar_fd, 0, SEEK_SET);
+    return ret;
+}
+
 /*
 Helper functions : END
 */
@@ -205,47 +247,6 @@ int exists(int tar_fd, char *path)
     return ret;
 }
 
-/**
- * Checks whether an entry in the archive matches the specified type.
- *
- * @param tar_fd A file descriptor pointing to the start of a valid tar archive file.
- * @param path A path to an entry in the archive.
- * @param type_file String(s) specifying the expected type(s) of the entry ([DIRTYPE], [REGTYPE, AREGTYPE], [SYMTYPE, LNKTYPE]).
- *
- * @return 1 if the entry at the given path exists in the archive and matches the specified type,
- *         0 otherwise. If the specified type is not recognized, the function returns -1.
- */
-int is_x(int tar_fd, char *path, char *type_file)
-{
-    tar_header_t header;
-    int ret = 0;
-
-    lseek(tar_fd, 0, SEEK_SET);
-
-    while (read(tar_fd, &header, HEADER_SIZE) > 0 && header.name[0] != '\0')
-    {   
-        if (strcmp(header.name, path) == 0)
-        {
-            if (strcmp(type_file, "dir") == 0)
-            {
-                if (header.typeflag == DIRTYPE)                                 {ret = 1; break;}
-            }
-            else if (strcmp(type_file, "file") == 0)
-            {
-                if (header.typeflag == REGTYPE || header.typeflag == AREGTYPE)  {ret = 1; break;}
-            }
-            else if (strcmp(type_file, "symlink") == 0)
-            {
-                if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE)   {ret = 1; break;}
-            }
-            else                                                                {ret = -1; break;}
-        }
-        skip_file_content(tar_fd, header);
-    }
-
-    lseek(tar_fd, 0, SEEK_SET);
-    return ret;
-}
 
 /**
  * Checks whether an entry exists in the archive and is a directory.
