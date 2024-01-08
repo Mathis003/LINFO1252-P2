@@ -1,13 +1,29 @@
-CFLAGS=-g -Wall -Werror
+CC = gcc
+CFLAGS = -g -Wall -Werror -Wextra
 
-all: tests lib_tar.o
+SRC_DIR = src
+BIN_DIR = bin
 
-lib_tar.o: lib_tar.c lib_tar.h
+SOURCES = $(wildcard $(SRC_DIR)/*.c)
+OBJECTS = $(patsubst $(SRC_DIR)/%.c, $(BIN_DIR)/%.o, $(SOURCES))
+EXECUTABLE = my_program
 
-tests: tests.c lib_tar.o
+all: $(BIN_DIR) $(EXECUTABLE)
+
+$(EXECUTABLE): $(OBJECTS)
+	@$(CC) $(CFLAGS) $^ -o $@
+
+$(BIN_DIR)/%.o: $(SRC_DIR)/%.c
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
+
+.PHONY: clean submit
 
 clean:
-	rm -f lib_tar.o tests soumission.tar
+	@rm -f $(EXECUTABLE) soumission.tar
+	@rm -r $(BIN_DIR)
 
 submit: all
-	tar --posix --pax-option delete=".*" --pax-option delete="*time*" --no-xattrs --no-acl --no-selinux -c *.h *.c Makefile > soumission.tar
+	@tar --posix --pax-option delete=".*" --pax-option delete="*time*" --no-xattrs --no-acl --no-selinux -c *.h *.c Makefile > soumission.tar

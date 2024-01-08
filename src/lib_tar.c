@@ -137,12 +137,12 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
             if (header.typeflag == SYMTYPE || header.typeflag == LNKTYPE) return read_file(tar_fd, header.linkname, offset, dest, len);
             if (header.typeflag == AREGTYPE || header.typeflag == REGTYPE)
             {
-                long total_len = TAR_INT(header.size) - offset;
+                size_t total_len = TAR_INT(header.size) - offset;
                 if (total_len <= 0) {ret = -2; break;}
 
                 lseek(tar_fd, offset, SEEK_CUR);
 
-                long used_len = (total_len > dest_len) ? dest_len : total_len;
+                size_t used_len = (total_len > dest_len) ? dest_len : total_len;
                 if (read(tar_fd, dest, used_len) <= 0) break;
                 *len = used_len;
                 ret = total_len - used_len;

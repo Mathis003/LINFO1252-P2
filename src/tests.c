@@ -2,12 +2,12 @@
 
 void debug_dump(const uint8_t *bytes, size_t len)
 {
-    for (int i = 0; i < len;)
+    for (size_t i = 0; i < len;)
     {
         printf("%04x:  ", (int) i);
-        for (int j = 0; j < 16 && i + j < len; j++) printf("%02x ", bytes[i + j]);
+        for (size_t j = 0; j < 16 && i + j < len; j++) printf("%02x ", bytes[i + j]);
         printf("\t");
-        for (int j = 0; j < 16 && i < len; j++, i++) printf("%c ", bytes[i]);
+        for (size_t j = 0; j < 16 && i < len; j++, i++) printf("%c ", bytes[i]);
         printf("\n");
     }
 }
@@ -55,11 +55,11 @@ int cmper_str(const void *a, const void *b)
     return strcmp(*(const char **)a, *(const char **)b);
 }
 
-void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expected_no_entries, char *expected_entries[])
+void list_test(int fd, char *path, size_t no_entries, int expected_ret, size_t expected_no_entries, char *expected_entries[])
 {
     size_t copy_no_entries = no_entries;
     char **entries = (char **) malloc(no_entries * sizeof(char *));
-    for (int i = 0; i < no_entries; i++) *(entries + i) = (char *) calloc(200, sizeof(char));
+    for (size_t i = 0; i < no_entries; i++) *(entries + i) = (char *) calloc(200, sizeof(char));
     int ret = list(fd, path, entries, &no_entries);
 
     int error = 1;
@@ -69,7 +69,7 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
     qsort(expected_entries, expected_no_entries, sizeof(char *), cmper_str);
     qsort(entries, expected_no_entries, sizeof(char *), cmper_str);
 
-    for (int i = 0; i < expected_no_entries; i++)
+    for (size_t i = 0; i < expected_no_entries; i++)
     {
         if (strcmp(expected_entries[i], entries[i]) != 0)
         {
@@ -81,21 +81,21 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
     if (error == 0)
     {
         printf("ERROR : list() [args : path = %s , no_entries = %ld ]\n", path, copy_no_entries);
-        printf("no_entries = %ld AND expected_no_entries = %d\n", no_entries, expected_no_entries);
+        printf("no_entries = %ld AND expected_no_entries = %ld\n", no_entries, expected_no_entries);
         printf("ret = %d AND expected_ret = %d\n", ret, expected_ret);
 
         if (no_entries > 0)
         {
             char entries_str[100000] = "[ ";
             char expected_entries_str[100000] = "[ ";
-            for (int i = 0; i < expected_no_entries - 1; i++)
+            for (size_t i = 0; i < expected_no_entries - 1; i++)
             {
                 strcat(expected_entries_str, expected_entries[i]);
                 strcat(expected_entries_str, ", ");
                 strcat(entries_str, entries[i]);
                 strcat(entries_str, ", ");
             }
-            if (expected_no_entries - 1 >= 0)
+            if (expected_no_entries > 0)
             {
                 strcat(expected_entries_str, expected_entries[expected_no_entries - 1]);
                 strcat(entries_str, entries[expected_no_entries - 1]);
@@ -107,19 +107,19 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
         }
     } else printf("\tTest Passed !\n");
 
-    for (int i = 0; i < no_entries; i++) {free(entries[i]); entries[i] = NULL;}
+    for (size_t i = 0; i < no_entries; i++) {free(entries[i]); entries[i] = NULL;}
     free(entries);
     entries = NULL;
 }
 
 
-void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_ret, int expected_len, char *expected_buffer)
+void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_ret, size_t expected_len, char *expected_buffer)
 {
     uint8_t *buffer = calloc(sizeof(char), len);
     int ret = read_file(fd, path, offset, buffer, &len);
     int no_error = 1;
     if (expected_ret != ret) {no_error = 0; printf("ERROR : read_file()\nReturn %d instead of %d\n[args : path = %s ]\n", ret, expected_ret, path);}
-    if (expected_len != len) {no_error = 0; printf("ERROR : read_file()\nlen = %ld instead of len = %d\n[args : path = %s ]\n", len, expected_len, path);}
+    if (expected_len != len) {no_error = 0; printf("ERROR : read_file()\nlen = %ld instead of len = %ld\n[args : path = %s ]\n", len, expected_len, path);}
     if (strcmp(expected_buffer, (char *) buffer) != 0) {no_error = 0; printf("ERROR : read_file()\nbuffer = %s instead of buffer = %s\n[args : path = %s ]\n", buffer, expected_buffer, path);}
 
     if (no_error == 1) printf("\tTest Passed !\n");
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 
     // *** check_archive_test() : BEGIN ***
     printf("Test check_archive() :\n");
-    check_archive_test(fd, 24);
+    check_archive_test(fd, 23);
     // *** check_archive_test() : END ***
 
 

@@ -62,7 +62,7 @@ int cmper_str(const void *a, const void *b);
  * @param expected_no_entries Expected number of entries.
  * @param expected_entries    Expected array of entry names.
  */
-void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expected_no_entries, char *expected_entries[]);
+void list_test(int fd, char *path, size_t no_entries, int expected_ret, size_t expected_no_entries, char *expected_entries[]);
 
 /**
  * @brief Test function for the read_file function.
@@ -75,7 +75,7 @@ void list_test(int fd, char *path, size_t no_entries, int expected_ret, int expe
  * @param expected_len    Expected length of the read data.
  * @param expected_buffer Expected content of the read data.
  */
-void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_ret, int expected_len, char *expected_buffer);
+void read_file_test(int fd, char *path, size_t offset, size_t len, int expected_ret, size_t expected_len, char *expected_buffer);
 
 /**
  * @brief Main test function.

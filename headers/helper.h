@@ -1,6 +1,14 @@
 #ifndef HELPER_H
 #define HELPER_H
 
+#include <stdlib.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
+
 #include "var.h"
 
 /**
