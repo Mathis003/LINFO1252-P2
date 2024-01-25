@@ -58,4 +58,4 @@ For detailed information on the current state of the project, refer to the sourc
 Contributions, feedback, and suggestions are welcomed. Feel free to share your thoughts and improvements.
 
 ---
-*This project is a part of the LINFO1252 course at UCL in the Civil Engineering program, focusing on computer science.*
+*This project is a part of the LINFO1252 course at UCLouvain in the Civil Engineering program, focusing on computer science.*
