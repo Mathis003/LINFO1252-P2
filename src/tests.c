@@ -44,7 +44,7 @@ void is_x_test(int fd, char *path, char *type, int expected)
     {
         ret = is_dir(fd, path);
         function_name = "is_dir";
-    }
+    } else { printf("\tTest Failed !\n"); return; }
 
     if (expected != ret) printf("ERROR : %s()\nReturn %d instead of %d\n[args : path = %s ]\n", function_name, ret, expected, path);
     else printf("\tTest Passed !\n");
