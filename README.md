@@ -5,7 +5,7 @@
 Welcome to the project repository for the LINFO1252 course at UCL, part of the Civil Engineering program in the field of computer science. This project focuses on implementing a basic Tar archive utility in C, providing functionality for creating, reading, and manipulating Tar archives. The utility includes operations such as checking the validity of an archive, checking for the existence of a file or directory, determining the type of a file (regular file, directory, or symbolic link), listing the contents of a directory within the archive, and reading the contents of a file.
 
 ### Project Details
-- **Grade and Feedback:** 20/20.
+- **Grade:** 20/20.
 - **Course:** LINFO1252, UCLouvain Engineering program, Computer Science track.
 
 ## Tar Archive Structure
@@ -48,6 +48,10 @@ This project uses a Makefile to streamline compilation, execution, and additiona
 ## Further Information
 
 For additional details on function parameters, return values, and specific implementation details, refer to the source code and header files.
+Please note that this version represents a partial implementation that may lack certain features. Notably, the functionality for listing directory contents (`list` function) does not currently support relative paths (e.g., the use of `../`). This limitation may impact the accurate representation of directory structures in certain cases.
+
+Contributors are aware of this limitation, and future updates or versions may address these aspects for a more comprehensive solution.
+For detailed information on the current state of the project, refer to the source code and associated documentation.
 
 ## Contributions
 
